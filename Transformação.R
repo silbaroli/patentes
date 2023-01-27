@@ -26,10 +26,10 @@ db$pais2=db$pais
 db <- db %>% 
   separate(pais2, into = c(paste0("pais_",seq(1,max(lengths(regmatches(db$pais, gregexpr(",", db$pais))))))), sep = ",")
 
-table(is.na(db$pais_1))
-table(db$pais_1=="")
-
-table(db[is.na(as.numeric(db$X))==F,]$pais_1)
+# table(is.na(db$pais_1))
+# table(db$pais_1=="")
+# 
+# table(db[is.na(as.numeric(db$X))==F,]$pais_1)
 
 for(i in colnames(db)[str_detect(colnames(db),"pais_")]){
   db[,i]=str_trim(db[,i])
@@ -698,23 +698,23 @@ write.csv(db2,"database.csv",row.names = F)
 
 # Choices - Categoria nivel 1 e 2 -----------------------------------------
 
-cat=db2[duplicated(db2$variable)==F,c("nivel1","variable")]
-names(cat)=c("nivel1","nivel2")
-
-cat$nivel2=factor(cat$nivel2,levels = unique(cat$nivel2),labels=c("Tecnologias de Eficiência Energética aplicadas à Industria",
-                                                                  "Tecnologias de Eficiência Energética aplicada a residências e estabelecimentos comerciais",
-                                                                  "Tecnologias de Eficiência Energética aplicadas ao setor de transporte rodoviário",
-                                                                  "Outras Tecnologias de Eficiência Energética","Energia solar","Energia Eólica",
-                                                                  "Energia dos Oceanos","Biocombustíveis","Energia Geotérmica","Hidroeletricidade",
-                                                                  "Fissão Nuclear","Fusão Nuclear","Outros fusão e fissão não alocados","Células a Combustível",
-                                                                  "Outras Tecnologias de Geração","Armazenamento de Energia"))
-
-cat$nivel1=ifelse(cat$nivel1=="iea1","Eficiência Energética",
-                  ifelse(cat$nivel1=="iea2","Energias Fósseis: Petróleo, Gás Natural e Carvão Mineral",
-                         ifelse(cat$nivel1=="iea3","Fontes de Energia Renováveis",
-                                ifelse(cat$nivel1=="iea4","Fissão e Fusão Nuclear",
-                                       ifelse(cat$nivel1=="iea5","Hidrogênio e Células a Combustível",
-                                              ifelse(cat$nivel1=="iea6","Outras Tecnologias de Geração e Armazenamento de Energia",
-                                                     ifelse(cat$nivel1=="iea7","Outras Tecnologias e Pesquisas Transversais",NA)))))))
-
-write.csv(cat,"categorias_iea.csv",row.names = F)
+# cat=db2[duplicated(db2$variable)==F,c("nivel1","variable")]
+# names(cat)=c("nivel1","nivel2")
+# 
+# cat$nivel2=factor(cat$nivel2,levels = unique(cat$nivel2),labels=c("Tecnologias de Eficiência Energética aplicadas à Industria",
+#                                                                   "Tecnologias de Eficiência Energética aplicada a residências e estabelecimentos comerciais",
+#                                                                   "Tecnologias de Eficiência Energética aplicadas ao setor de transporte rodoviário",
+#                                                                   "Outras Tecnologias de Eficiência Energética","Energia solar","Energia Eólica",
+#                                                                   "Energia dos Oceanos","Biocombustíveis","Energia Geotérmica","Hidroeletricidade",
+#                                                                   "Fissão Nuclear","Fusão Nuclear","Outros fusão e fissão não alocados","Células a Combustível",
+#                                                                   "Outras Tecnologias de Geração","Armazenamento de Energia"))
+# 
+# cat$nivel1=ifelse(cat$nivel1=="iea1","Eficiência Energética",
+#                   ifelse(cat$nivel1=="iea2","Energias Fósseis: Petróleo, Gás Natural e Carvão Mineral",
+#                          ifelse(cat$nivel1=="iea3","Fontes de Energia Renováveis",
+#                                 ifelse(cat$nivel1=="iea4","Fissão e Fusão Nuclear",
+#                                        ifelse(cat$nivel1=="iea5","Hidrogênio e Células a Combustível",
+#                                               ifelse(cat$nivel1=="iea6","Outras Tecnologias de Geração e Armazenamento de Energia",
+#                                                      ifelse(cat$nivel1=="iea7","Outras Tecnologias e Pesquisas Transversais",NA)))))))
+# 
+# write.csv(cat,"categorias_iea.csv",row.names = F)
