@@ -5,7 +5,7 @@ source("tab_depositante.R")
 source("tab_inventor.R")
 source("tab_colaboracao.R")
 
-cat=read.csv("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/categorias_iea.csv")
+cat=read.csv("~/Google Drive/Meu Drive/Consultoria/CEPAL/painel/categorias_iea.csv")
 
 options(spinner.color = "grey", spinner.color.background = "#ffffff", spinner.size = 2, shiny.reactlog=TRUE)
 
