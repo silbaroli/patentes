@@ -11,7 +11,7 @@ library(genderBR)
 library(gender)
 
 #library(gender)
-
+setwd("..")
 db=read.csv("patentes.csv",sep="#")
 
 
