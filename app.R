@@ -20,7 +20,6 @@ setwd("~/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
 source("sidebar.R")
 source("header.R")
 source("page.R")
-source("title.R")
 
 options(spinner.color = "grey", spinner.color.background = "#ffffff", spinner.size = 2, shiny.reactlog=TRUE)
 
