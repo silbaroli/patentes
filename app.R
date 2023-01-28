@@ -35,7 +35,7 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
   
   database <- reactive({
-    df=read.csv("database.csv")
+    df=read.csv("data/database.csv")
     
     df$ano=switch(input$tp_ano,
       "Pedido" = df$ano_pedido,
