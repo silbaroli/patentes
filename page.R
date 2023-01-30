@@ -5,7 +5,9 @@ source("tab_depositante.R")
 source("tab_inventor.R")
 source("tab_colaboracao.R")
 
-cat=read.csv("~/Google Drive/Meu Drive/Consultoria/CEPAL/painel/categorias_iea.csv")
+setwd("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
+
+cat=read.csv("categorias_iea.csv")
 
 options(spinner.color = "grey", spinner.color.background = "#ffffff", spinner.size = 2, shiny.reactlog=TRUE)
 
@@ -15,12 +17,12 @@ page <- dashboardBody(
       h1(htmlOutput("title")),
       hr(),
       column(width = 3,
-             h4(pickerInput("nivel1","Tecnologia energética nível 1",choices = unique(cat$nivel1),
-                            options = list(`actions-box` = TRUE,size = 10,`selected-text-format` = "count > 3"),multiple = T,selected = unique(cat$nivel1)))   
+             h4(pickerInput("nivel1","Tecnologia energética nível 1",choices = unique(cat$label1),
+                            options = list(`actions-box` = TRUE,size = 10,`selected-text-format` = "count > 3"),multiple = T,selected = unique(cat$label1)))   
       ),
       column(width = 3,
-             h4(pickerInput("nivel2","Tecnologia energética nível 2",choices = unique(cat$nivel2),
-                            options = list(`actions-box` = TRUE,size = 10,`selected-text-format` = "count > 3"),multiple = T,selected = unique(cat$nivel2)))  
+             h4(pickerInput("nivel2","Tecnologia energética nível 2",choices = unique(cat$label2),
+                            options = list(`actions-box` = TRUE,size = 10,`selected-text-format` = "count > 3"),multiple = T,selected = unique(cat$label2)))  
       ),
       column(width = 2,
              h4(pickerInput("status","Situação",choices = c("Deferida"="deferida","Concedida"="concedida",

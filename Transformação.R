@@ -3,41 +3,39 @@ library(stringr)
 library(tidyverse)
 library(reshape2)
 library(lubridate)
+library(devtools)
 
 #devtools::install_github("ropensci/gender")
 #remotes::install_github("lmullen/genderdata")
-
 library(genderBR)
 library(gender)
 
-#library(gender)
 setwd("..")
-db=read.csv("patentes.csv",sep="#")
+
+#install("painel/pacotes/inpietl")
+library(inpietl)
+
+db=read.csv("painel/data-raw/patentes.csv",sep="#")
 
 
 # Paises ---------------------------------------------------------
 
-db$pais=str_replace_all(db$paises,"\\[","")
-db$pais=str_replace_all(db$pais,"\\]","")
-db$pais=str_replace_all(db$pais,"'","")
-db$pais=str_replace_all(db$pais,"\\.","")
+## Remover caracteres especiais (colchetes, aspas, etc)
+db$pais=inpietl::remove_caracter(db$paises)
 
+## Separar os múltiplos paises
 db$pais2=db$pais
 db <- db %>% 
   separate(pais2, into = c(paste0("pais_",seq(1,max(lengths(regmatches(db$pais, gregexpr(",", db$pais))))))), sep = ",")
 
-# table(is.na(db$pais_1))
-# table(db$pais_1=="")
-# 
-# table(db[is.na(as.numeric(db$X))==F,]$pais_1)
-
+## Remover excesso de espaço no começo da variável e remover termos que não se referem a nome sigla de países
+## em todas as variáveis país
 for(i in colnames(db)[str_detect(colnames(db),"pais_")]){
   db[,i]=str_trim(db[,i])
   db[which(nchar(db[,i])>5),i]=NA
-  #db[which(str_detect(db[,i],"BR")),i]="BR"
 }
 
-###Valores a excluir
+## Valores a excluir
 excluir=c("1991","1999","2000","2003","2004","2005","2006","2007","2009","25%","50%","51%","CHUM","CIRAD","CNRS",
           "CSIC","CSIG","Gmbh","GMBH","I.R.D","IAE","ICAT","INDIA","INRA","INTA","IPK","IRD","Iwood", "JSC",
           "Ltd","Ltd.","LTD.","MAG","NO. 2","no.2","NO.2","NTNU","publ","Publ","PUBL","Publ.","RATP","S. A.",
@@ -45,27 +43,33 @@ excluir=c("1991","1999","2000","2003","2004","2005","2006","2007","2009","25%","
           "GROUP","INSTM","IVIA","RDA","UNESP","Cirad","UFMS","ACES","SCRAS","CRVC","CDN","BVI","EFS","EPFL",
           "no2","NO2","NRC","LTD","FUB","GNIS","INSA","UNL","CEA","FIL","CEA","Pty","PTY")
 
-
-#db[which(str_detect(db$pais,paste(excluir, collapse = "|"))),]$pais=NA
+## Atribuindo NA para os termos da lista de exclusão para todas as variáveis país
 for(i in colnames(db)[str_detect(colnames(db),"pais_")]){
   db[which(str_detect(db[,i],paste(excluir, collapse = "|"))),i]=NA
 }
 
+## Corrigindo nomes e removendo as repetições das siglas dos países
 for(i in colnames(db)[str_detect(colnames(db),"pais_")]){
   db[,i]=ifelse(db[,i]=="CHINA","CN",db[,i])
   db[,i]=ifelse(substr(db[,i],1,2)==substr(db[,i],4,6),substr(db[,i],1,2),db[,i])
 }
 
+## Removendo os caracteres adicionais das variáveis país (acima de 2 caracteres)
 for(i in colnames(db)[str_detect(colnames(db),"pais_")]){
   db[,i]=substr(db[,i],1,2)
 }
 
 
 # UF ----------------------------------------------------------------------
+
+## Criação de múltiplas variáveis para UF
 db$uf=db$pais
 db <- db %>% 
   separate(uf, into = c(paste0("uf_",seq(1,max(lengths(regmatches(db$pais, gregexpr("BR/", db$uf))))))), sep = ",")
 
+
+## Atribuindo NA para siglas diferentes do Brasil, removendo excesso de espaço no começo das variáveis e extração
+## somente dos termos da UF com 2 dígitos
 for(i in colnames(db)[str_detect(colnames(db),"uf_")]){
   db[which(str_detect(db[,i],"BR")==F),i]=NA
   db[,i]=str_trim(db[,i])
@@ -77,6 +81,8 @@ for(i in colnames(db)[str_detect(colnames(db),"uf_")]){
 ########################################################
 ### TENTAR UM SCRIPT AUTOMATIZADO PARA EXECUTAR ISSO ###
 ########################################################
+
+## Removendo as repetições de UF nas diferentes variáveis
 db$uf_2=ifelse(db$uf_2==db$uf_1,NA,db$uf_2)
 db$uf_3=ifelse(db$uf_3==db$uf_1,NA,db$uf_3)
 db$uf_4=ifelse(db$uf_4==db$uf_1,NA,db$uf_4)
@@ -113,17 +119,27 @@ db$uf_7=NULL
 
 # Nacionalidade -----------------------------------------------------------
 
-db$brasil=0
-db[which(db$pais_1=="BR" | db$pais_2=="BR" | db$pais_3=="BR" | 
-           db$pais_4=="BR" | db$pais_5=="BR" | db$pais_6=="BR" |
-           db$pais_7=="BR"),]$brasil=1
-db[which(db$paises=="" | db$paises=="[]"),]$brasil=9
+## Definindo variável para identificar patentes com inventores do Brasil
+db$brasil=+(apply(db[,colnames(db)[str_detect(colnames(db),"pais_")]]=="BR",1,any))
+db$brasil=ifelse(is.na(db$brasil),0,db$brasil)
+db$brasil=ifelse(db$paises=="" | db$paises=="[]",9,db$brasil)
 
-#db$brasil2=ifelse(is.na(db$uf_1)==F | is.na(db$uf_2)==F | is.na(db$uf_3)==F | is.na(db$uf_4)==F,1,0)
+
+# América -----------------------------------------------------------------
+
+## Definindo variável para identificar patentes com inventores de algum país das américas
+america=c("AI","AG","AR","AW","BS","BB","BZ","BM","BO","XA","VG","BR","CA","KY","CL","CO","CR",
+          "CU","CW","DM","DO","EC","SV","FK","GF","GD","GP","GT","GY","HT","HN","JM","MQ","MX",
+          "MS","NI","PA","PY","PE","PR","XC","BL","XB","KN","LC","MF","VC","PM","SX","SR","TT",
+          "TC","US","UY","VE","VI")
+
+db$america=ifelse(str_detect(db$pais,paste(america,collapse = "|")),1,0)
+db$america=ifelse(db$paises=="" | db$paises=="[]",9,db$america)
 
 
 # Cooperação internacional ------------------------------------------------
 
+## Definindo variável para identificar patentes de inventores do Brasil com cooperação de outros países
 db$inter=+(apply(db[,colnames(db)[str_detect(colnames(db),"pais_")]]!="BR",1,any))
 db$inter=ifelse(is.na(db$inter)==T,0,db$inter)
 
@@ -133,36 +149,38 @@ db$cooperacao=ifelse(db$brasil==1 & db$inter==1,1,
 
 # Status ---------------------------------------------------------
 
+## Separação da variável status em seus componentes
 db$status2=db$status
 db <- db %>% 
   separate(status2, into = c(paste0("status",seq(1,max(lengths(regmatches(db$status, gregexpr(": ", db$status))))))), sep = ": ")
 
-
-db$status1=str_replace_all(db$status1,"'","")
-db$status1=str_replace_all(db$status1,"\\{","")
-
-db[db$status1=="",]$status1="sem informação"
-
+## Criação da variável status da patente
+db$status1=remove_caracter(db$status1)
+db$status1=ifelse(db$status1=="","sem informação",db$status1)
 
 # Ano do deferimento ------------------------------------------------------
 
+## Criação da variável ano do deferimento a partir da subdivisão da variável status
 db$ano_deferimento=ifelse(str_detect(db$status2,"dataDeferimento"),as.numeric(substr(db$status3,unlist(gregexpr("\\(", db$status3))+1,unlist(gregexpr("\\(", db$status3))+4)),NA)
 db$ano_deferimento=ifelse(db$ano_deferimento>1900 & db$ano_deferimento<=year(Sys.Date()),db$ano_deferimento,NA)
 
 # Data da concessao -------------------------------------------------------
 
+## Criação da variável ano da concessão a partir da subdivisão da variável status
 db$ano_concessao=ifelse(str_detect(db$status2,"dataConcessao"),as.numeric(substr(db$status3,unlist(gregexpr("\\(", db$status3))+1,unlist(gregexpr("\\(", db$status3))+4)),NA)
 db$ano_concessao=ifelse(db$ano_concessao>1900 & db$ano_concessao<=year(Sys.Date()),db$ano_concessao,NA)
 
-
 # Data indeferimento ------------------------------------------------------
 
+## Criação da variável ano do indeferimento a partir da subdivisão da variável status
 db$ano_indeferimento=ifelse(str_detect(db$status2,"dataIndeferimento"),as.numeric(substr(db$status3,unlist(gregexpr("\\(", db$status3))+1,unlist(gregexpr("\\(", db$status3))+4)),NA)
 db$ano_indeferimento=ifelse(db$ano_indeferimento>1900 & db$ano_indeferimento<=year(Sys.Date()),db$ano_indeferimento,NA)
 
+# Ano do pedido -----------------------------------------------------------
+## Criação da variável ano do pedido a partir da variável ano
+db$ano_pedido=db$ano
 
-
-# Criação classificação categorias IEA -------------------------------------------
+# Criação classificação categorias WIPO -------------------------------------------
 
 db$cod1=ifelse(str_detect(db$listaClassificacaoInternacional,
                           paste(c("C10B 53/02","C10L 5/4","C10L 9/"),collapse = "|")),1,0)
@@ -500,52 +518,24 @@ db$cod126=ifelse(str_detect(db$listaClassificacaoInternacional,"G21D")==T,1,0)
 
 db$cod127=ifelse(str_detect(db$listaClassificacaoInternacional,"F02C 1/05")==T,1,0)
 
+
+## Identificando a frequência de classificações das categorias IEA nível 2
 db$sum=rowSums(db[,c(colnames(db)[str_detect(colnames(db),"cod")])])
 
+## Selecionando os registros que foram classificados em pelo menos uma categoria IEA nível 2
+## Removidos 1452 registros que não foram classificados em nenhuma categoria
+## Até 9 classificações nível 2 uma mesma patente
+
 db=db[which(db$sum>0),]
+
+## Removendo a variável para verificar a frequência
 db$sum=NULL
 
-#Nível 1
-#db$iea1=ifelse(db$cod19==1 | db$cod20==1 | db$cod25==1| 
-#                 db$cod113==1| db$cod114==1| db$cod115==1| 
-#                 db$cod116==1| db$cod117==1| db$cod118==1| 
-#                 db$cod119==1| db$cod120==1| db$cod121==1|
-#                 db$cod74==1| db$cod87==1| db$cod88==1| 
-#                 db$cod89==1| db$cod90==1| db$cod91==1| 
-#                 db$cod92==1| db$cod93==1| db$cod94==1| 
-#                 db$cod95==1| db$cod96==1| db$cod97==1| 
-#                 db$cod98==1| db$cod99==1| db$cod100==1| 
-#                 db$cod101==1| db$cod102==1| db$cod103==1| 
-#                 db$cod104==1| db$cod105==1| db$cod106==1| 
-#                 db$cod107==1| db$cod122==1| db$cod69==1| 
-#                 db$cod70==1| db$cod71==1| db$cod72==1| 
-#                 db$cod73==1| db$cod75==1| db$cod76==1| 
-#                 db$cod77==1| db$cod78==1| db$cod79==1| 
-#                 db$cod80==1| db$cod81==1| db$cod82==1| 
-#                 db$cod83==1| db$cod84==1| db$cod85==1| 
-#                 db$cod86==1| db$cod109==1| db$cod110==1| db$cod111==1,1,0)
-#
-#
-#db$iea3=ifelse(db$cod39==1 |db$cod40==1 |db$cod41==1 |db$cod42==1 |db$cod43==1 |db$cod44==1 |db$cod45==1 |db$cod46==1 |
-#                 db$cod47==1 |db$cod48==1 |db$cod49==1 |db$cod50==1 |db$cod51==1 |db$cod52==1 |db$cod53==1 |db$cod54==1 |
-#                 db$cod55==1 |db$cod56==1 |db$cod57==1 |db$cod58==1 |db$cod59==1 |db$cod60==1 |db$cod61==1 |db$cod62==1 |
-#                 db$cod63==1 |db$cod64==1 |db$cod33==1 | db$cod34==1 | db$cod35==1 | db$cod36==1 | db$cod37==1 | 
-#                 db$cod38==1 |db$cod32==1 |db$cod1==1 | db$cod2==1 | db$cod3==1 | db$cod4==1 | db$cod5==1 | db$cod6==1 | 
-#                 db$cod13==1 | db$cod14==1 | db$cod15==1 | db$cod16==1 | db$cod17==1 | db$cod18==1 | db$cod21==1 | 
-#                 db$cod22==1 | db$cod23==1 | db$cod24==1 | db$cod26==1 | db$cod65==1 | db$cod66==1 | db$cod67==1 | 
-#                 db$cod68==1 | db$cod27==1 | db$cod28==1 | db$cod29==1 | db$cod30==1 | db$cod31==1,1,0)
-#
-#db$iea4=ifelse(db$cod124==1 | db$cod125==1 | db$cod123==1 | db$cod126==1,1,0)
-#
-#db$iea5=ifelse(db$cod8==1 | db$cod9==1 | db$cod10==1 | db$cod11==1 | db$cod12==1,1,0)
-#
-#db$iea6=ifelse(db$cod127==1 | db$cod108==1 | db$cod112==1,1,0)
 
-#db$nivel1=paste(db$iea1,db$iea3,db$iea4,db$iea5,db$iea6,sep = ",")
-#db$nivel1=str_replace_all(db$nivel1,"0,","")
-#db$nivel1=str_replace_all(db$nivel1,",0","")
+# Classificação nível 2 ---------------------------------------------------
 
-#Nível 2
+
+## Criando variáveis para classificação Nível 2
 
 db$iea11=+(apply(db[,c("cod19","cod20","cod25")]==1,1,any))
 
@@ -585,81 +575,91 @@ db$iea61=ifelse(db$cod127==1,1,0)
 
 db$iea63=+(apply(db[,c("cod108","cod112")]==1,1,any))
 
-#db$sum=rowSums(db[,c(colnames(db)[str_detect(colnames(db),"iea")])])
+## Criando variável para cálcuo da frequência de classificações Nível 1
+db$sum=rowSums(db[,c(colnames(db)[str_detect(colnames(db),"iea")])])
 
-#db$iea11=ifelse(db$iea11==1,1.1,0)
-#db$iea12=ifelse(db$iea12==1,1.2,0)
-#db$iea13=ifelse(db$iea13==1,1.3,0)
-#db$iea14=ifelse(db$iea14==1,1.4,0)
-#db$iea31=ifelse(db$iea31==1,3.1,0)
-#db$iea32=ifelse(db$iea32==1,3.2,0)
-#db$iea33=ifelse(db$iea33==1,3.3,0)
-#db$iea34=ifelse(db$iea34==1,3.4,0)
-#db$iea35=ifelse(db$iea35==1,3.5,0)
-#db$iea36=ifelse(db$iea36==1,3.6,0)
-#db$iea41=ifelse(db$iea41==1,4.1,0)
-#db$iea42=ifelse(db$iea42==1,4.2,0)
-#db$iea49=ifelse(db$iea49==1,4.9,0)
-#db$iea52=ifelse(db$iea52==1,5.2,0)
-#db$iea61=ifelse(db$iea61==1,6.1,0)
-#db$iea63=ifelse(db$iea63==1,6.3,0)
-#
-#db$nivel2=paste(db$iea11,db$iea12,db$iea13,db$iea14,db$iea31,db$iea32,db$iea33,db$iea34,db$iea35,db$iea36,db$iea41,db$iea42,db$iea49,db$iea52,db$iea61,db$iea63,sep=",")
-#db$nivel2=str_replace_all(db$nivel2,"0,","")
-#db$nivel2=str_replace_all(db$nivel2,",0","")
-
+## 72 registros que não apresentam classificação Nível 1
+## Até 6 classificações nível 1 uma mesma patente
 
 # Tipo de inventor ------------------------------------------------------
 
-db$depositantes2=str_replace_all(db$depositantes,"\\[","")
-db$depositantes2=str_replace_all(db$depositantes2,"\\]","")
-db$depositantes2=str_replace_all(db$depositantes2,"'","")
-db$depositantes2=str_replace_all(db$depositantes2,'"',"")
+## Removendo caracteres especiais da variável depositante
+db$depositantes2=remove_caracter(db$depositantes)
+
+## Removendo os termos excedentes do nome do depositante que estão em parênteses
 db$depositantes2=sub(" \\(.*", "",db$depositantes2)
 
-db$inventores2=str_replace_all(db$inventores,"\\[","")
-db$inventores2=str_replace_all(db$inventores2,"\\]","")
-db$inventores2=str_replace_all(db$inventores2,"'","")
-db$inventores2=str_replace_all(db$inventores2,'"',"")
+## Removendo caracteres especiais da variável inventor
+db$inventores2=remove_caracter(db$inventores)
+
+## Separando a variável inventores em múltiplas entradas
 db=db %>% separate(inventores2,into="inventores2",sep=", ")
 
+## Criando variável para classificar se trata de pessoa física, considerando o nome do depositante vs inventor
 db$tp_pessoa=ifelse(db$depositantes2==db$inventores2,1,2)
-db$tp_pessoa=ifelse(db$depositantes=="" | db$inventores2=="",9,db$tp_pessoa)
 
-#View(db[,c("depositantes","depositantes2","inventores","inventores2","tp_pessoa")])
+## Atribuindo valor ignorado onde não há preenchido o nome do depositante ou inventor
+db$tp_pessoa=ifelse(db$depositantes=="" | db$inventores2=="" | db$depositantes=="nan",9,db$tp_pessoa)
 
 
 # Inventor feminino ------------------------------------------------------
 
-db$inventores2=str_replace_all(db$inventores,"\\[","")
-db$inventores2=str_replace_all(db$inventores2,"\\]","")
-db$inventores2=str_replace_all(db$inventores2,"'","")
-db$inventores2=str_replace_all(db$inventores2,'"',"")
+## Removendo caracteres especiais da variável inventores
+db$inventores2=remove_caracter(db$inventores)
+
+## Separando a variável em inventores nas múltiplas entradas
 db=db %>% separate(inventores2,into=c(paste0("invent_",seq(1,max(lengths(regmatches(db$inventores2, gregexpr(",", db$inventores2))))))),sep=", ")
 
+## Separando somente o primeiro nome de cada variável inventores
 for(i in colnames(db)[str_detect(colnames(db),"invent_")]){
   db[,i]=sub(" .*", "",db[,i])
 }
 
+## Calculando o gênero em relação ao primeiro nome dos inventores para cada variável inventor
+## Utilizado o pacote gender do Brasil (genderBR) para os registros com inventores brasileiros e gender para os demais
 for(i in colnames(db)[str_detect(colnames(db),"invent_")]){
   db[which(db$brasil==1),i]=ifelse(is.na(db[which(db$brasil==1),i])==F,get_gender(db[which(db$brasil==1),i]),db[which(db$brasil==1),i])
   db[which(db$brasil!=1),i]=ifelse(is.na(db[which(db$brasil!=1),i])==F,gender(db[which(db$brasil!=1),i])$gender,db[which(db$brasil!=1),i])
 }
 
-
+## Criando a variável presença de depositante feminino com base em cada uma das variáveis inventores
 db$feminino=+(apply(db[,colnames(db)[str_detect(colnames(db),"invent_")]]=="female" | 
                       db[,colnames(db)[str_detect(colnames(db),"invent_")]]=="Female",1,any))
 db$feminino=ifelse(is.na(db$feminino) & db$inventores!="",0,db$feminino)
 db$feminino=ifelse(is.na(db$feminino),9,db$feminino)
 
 
-
 # Database Final ----------------------------------------------------------
-db$ano_pedido=db$ano
+
+## Definição das variáveis que irão compor a base de dados
 vars=c("numeroBusca","brasil","cooperacao","status1","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
        colnames(db)[str_detect(colnames(db),"iea")],"tp_pessoa","feminino")
 
 db2=db[,vars]
+
+write.csv(db2,"painel/data/database.csv",row.names = F)
+
+
+# 
+# names(df)[names(df) == 'old.var.name'] <- 'new.var.name'
+# 
+# names(cat)[names(cat) == c("nivel1","nivel2")] <- c("level1","level2")
+# 
+# names(cat)
+
+
+
+# Old ---------------------------------------------------------------------
+
+# Categoria IEA Nivel 1 ---------------------------------------------------
+
+# db$iea1=+(apply(db[,colnames(db)[str_detect(colnames(db),"iea1")]]==1,1,any))
+# db$iea3=+(apply(db[,colnames(db)[str_detect(colnames(db),"iea3")]]==1,1,any))
+# db$iea4=+(apply(db[,colnames(db)[str_detect(colnames(db),"iea4")]]==1,1,any))
+# db$iea5=db$iea52
+# db$iea6=+(apply(db[,colnames(db)[str_detect(colnames(db),"iea6")]]==1,1,any))
+
+
 #names(db2[,colnames(db2)[str_detect(colnames(db2),"iea")==F]])
 
 db2=melt(db[,vars],id=names(db2[,colnames(db2)[str_detect(colnames(db2),"iea")==F]]))
@@ -684,12 +684,6 @@ db2$nivel2=factor(db2$variable,levels = unique(db2$variable),labels=c("Tecnologi
                                                                   "Outras Tecnologias de Geração","Armazenamento de Energia"))
 
 
-america=c("AI","AG","AR","AW","BS","BB","BZ","BM","BO","XA","VG","BR","CA","KY","CL","CO","CR",
-          "CU","CW","DM","DO","EC","SV","FK","GF","GD","GP","GT","GY","HT","HN","JM","MQ","MX",
-          "MS","NI","PA","PY","PE","PR","XC","BL","XB","KN","LC","MF","VC","PM","SX","SR","TT",
-          "TC","US","UY","VE","VI")
-
-db2$america=ifelse(str_detect(db2$pais,paste(america,collapse = "|")) & db2$brasil!=9,1,0)
 
 db2$variable=NULL
 write.csv(db2,"database.csv",row.names = F)

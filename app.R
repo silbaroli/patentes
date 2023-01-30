@@ -9,13 +9,10 @@ library(DT)
 library(ggplot2)
 library(plotly)
 library(stringr)
-library(gtable)
-library(gridExtra)
 library(lubridate)
 library(dplyr)
-library(forecast)
-
-setwd("~/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
+library(reshape2)
+setwd("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
 
 source("sidebar.R")
 source("header.R")
@@ -28,28 +25,50 @@ ui <- dashboardPage(header,sidebar,page)
 server <- function(input, output, session) {
   
   observeEvent(input$nivel1, {
-    cat=cat %>% filter(nivel1 %in% c(input$nivel1))
+    cat<-cat %>% filter(label1 %in% c(input$nivel1))
     
     updatePickerInput(session = session, inputId = "nivel2",
-                      choices = unique(cat$nivel2))
+                      choices = unique(cat$label2))
     
   }, ignoreInit = TRUE)
   
   database <- reactive({
-    df=read.csv("data/database.csv")
+    df<-read.csv("data/database.csv")
+    #df$count=1
     
-    df$ano=switch(input$tp_ano,
+    df <- rename(df,'Tecnologias de Eficiência Energética aplicadas à Industria'='iea11',
+                'Tecnologias de Eficiência Energética aplicada a residências e estabelecimentos comerciais'='iea12',
+                'Tecnologias de Eficiência Energética aplicadas ao setor de transporte rodoviário'='iea13',
+                'Outras Tecnologias de Eficiência Energética'='iea14',
+                'Energia solar'='iea31',
+                'Energia Eólica'='iea32',
+                'Energia dos Oceanos'='iea33',
+                'Biocombustíveis'='iea34',
+                'Energia Geotérmica'='iea35',
+                'Hidroeletricidade'='iea36',
+                'Fissão Nuclear'='iea41',
+                'Fusão Nuclear'='iea42',
+                'Outros fusão e fissão não alocados'='iea49',
+                'Células a Combustível'='iea52',
+                'Outras Tecnologias de Geração'='iea61',
+                'Armazenamento de Energia'='iea63')
+    
+    if(length(input$nivel2)>1){
+      df$count<-as.numeric(+(apply(df[,c(input$nivel2)]==1,1,any)))
+    } else{
+      df$count<-ifelse(df[,input$nivel2]==1,1,0)
+    }
+    
+    df$ano<-switch(input$tp_ano,
       "Pedido" = df$ano_pedido,
       "Concessão" = df$ano_concessao,
       "Deferimento" = df$ano_deferimento,
       "Indeferimento" = df$ano_indeferimento
     )
     
-    
-    df=df[which(df$ano>=min(input$date) & df$ano<=max(input$date)),]
-    df=df %>% filter(brasil %in% c(input$nacionalidade))
-    df=df %>% filter(status1 %in% c(input$status))
-    df=df %>% filter(nivel2 %in% c(input$nivel2))
+    df<-df[which(df$ano>=min(input$date) & df$ano<=max(input$date)),]
+    df<-df %>% filter(brasil %in% c(input$nacionalidade))
+    df<-df %>% filter(status1 %in% c(input$status))
     
   })
   
@@ -153,7 +172,6 @@ server <- function(input, output, session) {
                 pad = 5)
     
     db=database()
-    db=db[which(duplicated(db$numeroBusca)==F),]
     
     db1=aggregate(db$count,list(db$ano),sum,na.rm=T)
     names(db1)=c("date","count")
@@ -189,10 +207,12 @@ server <- function(input, output, session) {
                 pad = 5)
     
     db=database()
+    db=melt(db[,c("ano",input$nivel2)],id="ano")
+    db=merge(db,cat[,c("label1","label2")],by.x="variable",by.y="label2",all.x=T)
     
     db$classif=switch(input$nivel,
-      "Nível 1" = db$nivel1,
-      "Nível 2" = db$nivel2
+      "Nível 1" = db$label1,
+      "Nível 2" = db$variable
     )
     
     colors=switch (input$nivel,
@@ -218,9 +238,6 @@ server <- function(input, output, session) {
                     "Armazenamento de Energia"="#71dbd2")
     )
     
-    
-       
-    
     db1=aggregate(db$value,list(db$ano,db$classif),sum,na.rm=T)
     names(db1)=c("date","cat","count")
     
@@ -238,7 +255,6 @@ server <- function(input, output, session) {
     
     if(input$tp_plot1=="Barras"){
       if(input$select2=="Número absoluto"){
-        
         
         yTitle="Número de patentes"
         
@@ -282,9 +298,8 @@ server <- function(input, output, session) {
                 pad = 5)
     
     db=database()
-    db=db[which(duplicated(db$numeroBusca)==F),]
     
-    db1=aggregate(db$value,list(db$ano,db$status1),sum,na.rm=T)
+    db1=aggregate(db$count,list(db$ano,db$status1),sum,na.rm=T)
     names(db1)=c("date","cat","count")
     
     db1$per=NA
@@ -347,14 +362,13 @@ server <- function(input, output, session) {
                 pad = 5)
     
     db=database()
-    db=db[which(duplicated(db$numeroBusca)==F),]
     
     db$cat=switch(input$local,
       "Brasil" = db$brasil,
       "América" = db$america
     )
     
-    db1=aggregate(db$value,list(db$ano,db$cat),sum,na.rm=T)
+    db1=aggregate(db$count,list(db$ano,db$cat),sum,na.rm=T)
     names(db1)=c("date","cat","count")
     
     db1$per=NA
@@ -424,9 +438,8 @@ server <- function(input, output, session) {
                 pad = 5)
     
     db=database()
-    db=db[which(duplicated(db$numeroBusca)==F),]
     
-    db1=aggregate(db$value,list(db$ano,db$feminino),sum,na.rm=T)
+    db1=aggregate(db$count,list(db$ano,db$feminino),sum,na.rm=T)
     names(db1)=c("date","cat","count")
     
     db1$per=NA
@@ -490,7 +503,7 @@ server <- function(input, output, session) {
     db=database()
     db=db[which(db$brasil==1),]
     
-    db1=aggregate(db$value,list(db$ano,db$cooperacao),sum,na.rm=T)
+    db1=aggregate(db$count,list(db$ano,db$cooperacao),sum,na.rm=T)
     names(db1)=c("date","cat","count")
     
     db1$per=NA
@@ -548,11 +561,8 @@ server <- function(input, output, session) {
   
   output$tab1 <- DT::renderDataTable({
     db=database()
-    db=db[which(duplicated(db$numeroBusca)==F),]
-    
     
     tab=aggregate(db$count,list(db$ano),sum,na.rm=T)
-    
     
     my.options <- list(autoWidth = FALSE,
                        searching = FALSE,
