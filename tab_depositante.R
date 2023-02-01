@@ -1,12 +1,16 @@
+
 depositante<-tabItem(tabName = "depositante",
   box(width = 12,
     conditionalPanel(condition = "input.tp_plot1=='Barras'",
-      column(width = 6,
+      column(width = 5,
         h5(radioButtons("select4","Indicador",choices = c("Número absoluto","Proporção"),inline = T),align="left")
       )
     ),
-    column(width = 6,
+    column(width = 5,
       h5(radioButtons("local","Localização",choices = c("América","Brasil"),inline = T,selected = "Brasil"),align="left")
+    ),
+    column(width = 2,align="right",
+      h4(downloadButton("data4", label = NULL, class = NULL,icon = icon("download")))
     ),
     fluidRow(
       box(width = 12,

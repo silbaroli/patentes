@@ -624,6 +624,22 @@ server <- function(input, output, session) {
     print(my.table)
   })
   
+  output$data1 <- downloadHandler(
+    
+    filename = function() {
+      "data.csv"
+    },
+    
+    content = function(file) {
+      
+      df=database() %>%
+        group_by(ano) %>%
+        summarise(n=n())
+      
+      write.csv2(df, file,row.names = FALSE)
+    }
+  )
+  
 }
 
 shinyApp(ui, server)

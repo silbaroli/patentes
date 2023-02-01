@@ -632,7 +632,7 @@ db$feminino=ifelse(is.na(db$feminino),9,db$feminino)
 # Database Final ----------------------------------------------------------
 
 ## Definição das variáveis que irão compor a base de dados
-vars=c("numeroBusca","brasil","cooperacao","status1","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
+vars=c("numeroBusca","brasil","america","cooperacao","status1","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
        colnames(db)[str_detect(colnames(db),"iea")],"tp_pessoa","feminino")
 
 db2=db[,vars]
