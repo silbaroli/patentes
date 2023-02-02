@@ -5,20 +5,21 @@ library(shinycssloaders)
 library(shinyWidgets)
 library(shinyjs)
 library(DT)
-
 library(ggplot2)
 library(plotly)
 library(stringr)
 library(lubridate)
 library(dplyr)
 library(reshape2)
-setwd("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
 
+options(spinner.color = "grey", spinner.color.background = "#ffffff", spinner.size = 2, shiny.reactlog=TRUE)
+
+
+setwd("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
 source("sidebar.R")
 source("header.R")
 source("page.R")
 
-options(spinner.color = "grey", spinner.color.background = "#ffffff", spinner.size = 2, shiny.reactlog=TRUE)
 
 ui <- dashboardPage(header,sidebar,page)
 
@@ -171,10 +172,10 @@ server <- function(input, output, session) {
                 b = 50, t = 10,
                 pad = 5)
     
-    db=database()
+    db1=database() %>%
+      group_by(date=ano) %>%
+      summarise(count=sum(count))
     
-    db1=aggregate(db$count,list(db$ano),sum,na.rm=T)
-    names(db1)=c("date","count")
     
     xTitle=switch (input$tp_ano,
       "Pedido" = "Ano do pedido",
@@ -194,7 +195,7 @@ server <- function(input, output, session) {
         layout(yaxis = list(tickformat = ".0f"))
     } else if(input$tp_plot=="Linhas"){
       plot_ly(db1, x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
+        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = F, linewidth = 1.1, linecolor = 'black'),
                yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
         layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
         layout(yaxis = list(tickformat = ".0f"))
@@ -238,8 +239,11 @@ server <- function(input, output, session) {
                     "Armazenamento de Energia"="#71dbd2")
     )
     
-    db1=aggregate(db$value,list(db$ano,db$classif),sum,na.rm=T)
-    names(db1)=c("date","cat","count")
+    
+    db1=db %>%
+      group_by(date=ano,cat=classif) %>%
+      summarise(count=sum(value))
+    
     
     db1$per=NA
     for(i in unique(db1$date)){
@@ -261,7 +265,7 @@ server <- function(input, output, session) {
         plot_ly(db1, x = ~date, y = ~count,color = ~cat, type = 'bar',colors = colors) %>%
           layout(xaxis = list(title = xTitle, showgrid = FALSE),
                  yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h")) %>%
+          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
           layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
           layout(yaxis = list(tickformat = ".0f"))
       } else if(input$select2=="Proporção"){
@@ -269,7 +273,7 @@ server <- function(input, output, session) {
         plot_ly(db1, x = ~date, y = ~per,color = ~cat, type = 'bar',colors = colors) %>%
           layout(xaxis = list(title = xTitle, showgrid = FALSE),
                  yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h")) %>%
+          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
           layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
           layout(yaxis = list(tickformat = ".0f"))
       }
@@ -279,7 +283,7 @@ server <- function(input, output, session) {
       plot_ly(db1, x = ~date, y = ~count, color= ~cat,type = 'scatter', mode = 'lines',colors = colors) %>%
         layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
                yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
-        layout(legend = list(orientation = "h")) %>%
+        layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
         layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
         layout(yaxis = list(tickformat = ".0f"))
     } else if(input$tp_plot1=="Setor"){
@@ -297,10 +301,11 @@ server <- function(input, output, session) {
                 b = 50, t = 10,
                 pad = 5)
     
-    db=database()
     
-    db1=aggregate(db$count,list(db$ano,db$status1),sum,na.rm=T)
-    names(db1)=c("date","cat","count")
+    db1=database() %>% 
+      group_by(date=ano,cat=status1) %>% 
+      summarise(count=sum(count))
+    
     
     db1$per=NA
     for(i in unique(db1$date)){
@@ -325,7 +330,7 @@ server <- function(input, output, session) {
         plot_ly(db1, x = ~date, y = ~count,color = ~cat, type = 'bar',colors=colors) %>%
           layout(xaxis = list(title = xTitle, showgrid = FALSE),
                  yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h")) %>%
+          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
           layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
           layout(yaxis = list(tickformat = ".0f"))
       } else if(input$select3=="Proporção"){
@@ -334,7 +339,7 @@ server <- function(input, output, session) {
         plot_ly(db1, x = ~date, y = ~per,color = ~cat, type = 'bar',colors=colors) %>%
           layout(xaxis = list(title = xTitle, showgrid = FALSE),
                  yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h")) %>%
+          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
           layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
           layout(yaxis = list(tickformat = ".0f"))
       }
@@ -342,13 +347,17 @@ server <- function(input, output, session) {
       yTitle="Número de patentes"
       
       plot_ly(db1, x = ~date, y = ~count, color= ~cat,type = 'scatter', mode = 'lines',colors=colors) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
+        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = F, linewidth = 1.1, linecolor = 'black'),
                yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
-        layout(legend = list(orientation = "h")) %>%
+        layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
         layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
         layout(yaxis = list(tickformat = ".0f"))
     } else if(input$tp_plot1=="Setor"){
-      plot_ly(data=db,labels = ~ status1, values = ~value) %>% 
+      db=database() %>% 
+        group_by(status1) %>% 
+        summarise(count=sum(count))
+      
+      plot_ly(data=db,labels = ~ status1, values = ~count) %>% 
         add_pie(hole = 0.6)%>% 
         layout(showlegend = F,
                xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
@@ -368,8 +377,10 @@ server <- function(input, output, session) {
       "América" = db$america
     )
     
-    db1=aggregate(db$count,list(db$ano,db$cat),sum,na.rm=T)
-    names(db1)=c("date","cat","count")
+    db1=db %>% 
+      group_by(date=ano,cat=cat) %>% 
+      summarise(count=sum(count))
+    
     
     db1$per=NA
     for(i in unique(db1$date)){
@@ -405,7 +416,7 @@ server <- function(input, output, session) {
         plot_ly(db1, x = ~date, y = ~per, type = 'bar',color = ~cat) %>%
           layout(xaxis = list(title = xTitle, showgrid = FALSE),
                  yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h")) %>%
+          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
           layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
           layout(yaxis = list(tickformat = ".0f%"))
       } 
@@ -439,8 +450,9 @@ server <- function(input, output, session) {
     
     db=database()
     
-    db1=aggregate(db$count,list(db$ano,db$feminino),sum,na.rm=T)
-    names(db1)=c("date","cat","count")
+    db1=database() %>% 
+      group_by(date=ano,cat=feminino) %>% 
+      summarise(count=sum(count))
     
     db1$per=NA
     for(i in unique(db1$date)){
@@ -472,7 +484,7 @@ server <- function(input, output, session) {
         plot_ly(db1, x = ~date, y = ~per, type = 'bar',color = ~cat) %>%
           layout(xaxis = list(title = xTitle, showgrid = FALSE),
                  yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h")) %>%
+          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
           layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
           layout(yaxis = list(tickformat = ".0f%"))
       } 
@@ -500,11 +512,10 @@ server <- function(input, output, session) {
                 b = 50, t = 10,
                 pad = 5)
     
-    db=database()
-    db=db[which(db$brasil==1),]
-    
-    db1=aggregate(db$count,list(db$ano,db$cooperacao),sum,na.rm=T)
-    names(db1)=c("date","cat","count")
+    db1=database() %>% 
+      filter(brasil==1) %>% 
+      group_by(date=ano,cat=cooperacao) %>% 
+      summarise(count=sum(count))
     
     db1$per=NA
     for(i in unique(db1$date)){
@@ -536,7 +547,7 @@ server <- function(input, output, session) {
         plot_ly(db1, x = ~date, y = ~per, type = 'bar',color = ~cat) %>%
           layout(xaxis = list(title = xTitle, showgrid = FALSE),
                  yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h")) %>%
+          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
           layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
           layout(yaxis = list(tickformat = ".0f%"))
       } 
@@ -560,9 +571,9 @@ server <- function(input, output, session) {
   })
   
   output$tab1 <- DT::renderDataTable({
-    db=database()
-    
-    tab=aggregate(db$count,list(db$ano),sum,na.rm=T)
+    tab=database() %>% 
+      group_by(ano) %>% 
+      summarise(count=sum(count))
     
     my.options <- list(autoWidth = FALSE,
                        searching = FALSE,
@@ -624,6 +635,373 @@ server <- function(input, output, session) {
     print(my.table)
   })
   
+  output$tab2 <- DT::renderDataTable({
+    db=database()
+    db=melt(db[,c("ano",input$nivel2)],id="ano")
+    db=merge(db,cat[,c("label1","label2")],by.x="variable",by.y="label2",all.x=T)
+    
+    db$classif=switch(input$nivel,
+                      "Nível 1" = db$label1,
+                      "Nível 2" = db$variable
+    )
+    
+    tab=db %>%
+      group_by(date=ano,cat=classif) %>%
+      summarise(count=sum(value))
+    
+    tab=reshape2::dcast(tab,date~cat,value.var = "count")
+    
+    my.options <- list(autoWidth = FALSE,
+                       searching = FALSE,
+                       ordering = TRUE,
+                       lengthChange = FALSE,
+                       lengthMenu = FALSE,
+                       pageLength = FALSE,
+                       paging = FALSE,
+                       info = FALSE,
+                       buttons = c('copy', 'csv', 'excel', 'pdf'),
+                       rowsGroup = list(0))
+    
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    
+    header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
+                      names(tab)[-1])
+    
+    my.container <- withTags(table(
+      style(type = "text/css", header.style),
+      thead(
+        tr(
+          lapply(header.names, th, style = "text-align: center; border-right-width: 1px; border-right-style: solid; border-right-color: white; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: white")
+        )
+      )
+    ))
+    
+    
+    
+    my.table <- datatable(tab, options = my.options, container = my.container, rownames = F, width = '100%', extensions = 'Buttons') %>%
+      formatStyle(columns = c(2:ncol(tab)),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "center",
+                  wordWrap = "break-word") %>%
+      formatStyle(columns = c(1),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "left",
+                  wordWrap = "break-word")
+    
+    
+    print(my.table)
+  })
+  
+  output$tab3 <- DT::renderDataTable({
+    tab=database() %>% 
+      group_by(date=ano,cat=status1) %>% 
+      summarise(count=sum(count))
+    
+    tab=reshape2::dcast(tab,date~cat,value.var = "count")
+    
+    my.options <- list(autoWidth = FALSE,
+                       searching = FALSE,
+                       ordering = TRUE,
+                       lengthChange = FALSE,
+                       lengthMenu = FALSE,
+                       pageLength = FALSE,
+                       paging = FALSE,
+                       info = FALSE,
+                       buttons = c('copy', 'csv', 'excel', 'pdf'),
+                       rowsGroup = list(0))
+    
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    
+    header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
+                      names(tab)[-1])
+    
+    my.container <- withTags(table(
+      style(type = "text/css", header.style),
+      thead(
+        tr(
+          lapply(header.names, th, style = "text-align: center; border-right-width: 1px; border-right-style: solid; border-right-color: white; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: white")
+        )
+      )
+    ))
+    
+    
+    
+    my.table <- datatable(tab, options = my.options, container = my.container, rownames = F, width = '100%', extensions = 'Buttons') %>%
+      formatStyle(columns = c(2:ncol(tab)),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "center",
+                  wordWrap = "break-word") %>%
+      formatStyle(columns = c(1),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "left",
+                  wordWrap = "break-word")
+    
+    
+    print(my.table)
+  })
+  
+  output$tab4 <- DT::renderDataTable({
+    db=database()
+    db$cat=switch(input$local,
+                  "Brasil" = db$brasil,
+                  "América" = db$america
+    )
+    
+    tab=db %>% 
+      group_by(date=ano,cat=cat) %>% 
+      summarise(count=sum(count))
+    
+    tab$cat=switch(input$local,
+      "Brasil" = ifelse(tab$cat==1,"Brasil",ifelse(tab$cat==0,"Outro país","Sem informação")),
+      "América" = ifelse(tab$cat==1,"América",ifelse(tab$cat==0,"Outro continente","Sem informação"))
+    )
+    
+    tab=reshape2::dcast(tab,date~cat,value.var = "count")
+    
+    my.options <- list(autoWidth = FALSE,
+                       searching = FALSE,
+                       ordering = TRUE,
+                       lengthChange = FALSE,
+                       lengthMenu = FALSE,
+                       pageLength = FALSE,
+                       paging = FALSE,
+                       info = FALSE,
+                       buttons = c('copy', 'csv', 'excel', 'pdf'),
+                       rowsGroup = list(0))
+    
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    
+    header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
+                      names(tab)[-1])
+    
+    my.container <- withTags(table(
+      style(type = "text/css", header.style),
+      thead(
+        tr(
+          lapply(header.names, th, style = "text-align: center; border-right-width: 1px; border-right-style: solid; border-right-color: white; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: white")
+        )
+      )
+    ))
+    
+    
+    
+    my.table <- datatable(tab, options = my.options, container = my.container, rownames = F, width = '100%', extensions = 'Buttons') %>%
+      formatStyle(columns = c(2:ncol(tab)),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "center",
+                  wordWrap = "break-word") %>%
+      formatStyle(columns = c(1),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "left",
+                  wordWrap = "break-word")
+    
+    
+    print(my.table)
+  })
+  
+  output$tab5 <- DT::renderDataTable({
+    
+    tab=database() %>% 
+      group_by(date=ano,cat=feminino) %>% 
+      summarise(count=sum(count))
+    
+    tab$cat=ifelse(tab$cat==1,"Presença Feminina",ifelse(tab$cat==0,"Ausência Feminina","Sem informação"))
+    
+    tab=reshape2::dcast(tab,date~cat,value.var = "count")
+    
+    my.options <- list(autoWidth = FALSE,
+                       searching = FALSE,
+                       ordering = TRUE,
+                       lengthChange = FALSE,
+                       lengthMenu = FALSE,
+                       pageLength = FALSE,
+                       paging = FALSE,
+                       info = FALSE,
+                       buttons = c('copy', 'csv', 'excel', 'pdf'),
+                       rowsGroup = list(0))
+    
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    
+    header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
+                      names(tab)[-1])
+    
+    my.container <- withTags(table(
+      style(type = "text/css", header.style),
+      thead(
+        tr(
+          lapply(header.names, th, style = "text-align: center; border-right-width: 1px; border-right-style: solid; border-right-color: white; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: white")
+        )
+      )
+    ))
+    
+    
+    
+    my.table <- datatable(tab, options = my.options, container = my.container, rownames = F, width = '100%', extensions = 'Buttons') %>%
+      formatStyle(columns = c(2:ncol(tab)),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "center",
+                  wordWrap = "break-word") %>%
+      formatStyle(columns = c(1),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "left",
+                  wordWrap = "break-word")
+    
+    
+    print(my.table)
+  })
+  
+  output$tab6 <- DT::renderDataTable({
+    
+    tab=database() %>% 
+      filter(brasil==1) %>% 
+      group_by(date=ano,cat=cooperacao) %>% 
+      summarise(count=sum(count))
+    
+    tab$cat=ifelse(tab$cat==1,"Com cooperação internacional",ifelse(tab$cat==0,"Sem cooperação internacional","Sem informação"))
+    
+    tab=reshape2::dcast(tab,date~cat,value.var = "count")
+    
+    my.options <- list(autoWidth = FALSE,
+                       searching = FALSE,
+                       ordering = TRUE,
+                       lengthChange = FALSE,
+                       lengthMenu = FALSE,
+                       pageLength = FALSE,
+                       paging = FALSE,
+                       info = FALSE,
+                       buttons = c('copy', 'csv', 'excel', 'pdf'),
+                       rowsGroup = list(0))
+    
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    
+    header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
+                      names(tab)[-1])
+    
+    my.container <- withTags(table(
+      style(type = "text/css", header.style),
+      thead(
+        tr(
+          lapply(header.names, th, style = "text-align: center; border-right-width: 1px; border-right-style: solid; border-right-color: white; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: white")
+        )
+      )
+    ))
+    
+    
+    
+    my.table <- datatable(tab, options = my.options, container = my.container, rownames = F, width = '100%', extensions = 'Buttons') %>%
+      formatStyle(columns = c(2:ncol(tab)),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "center",
+                  wordWrap = "break-word") %>%
+      formatStyle(columns = c(1),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "left",
+                  wordWrap = "break-word")
+    
+    
+    print(my.table)
+  })
+  
   output$data1 <- downloadHandler(
     
     filename = function() {
@@ -633,8 +1011,116 @@ server <- function(input, output, session) {
     content = function(file) {
       
       df=database() %>%
-        group_by(ano) %>%
-        summarise(n=n())
+        group_by(Ano) %>%
+        summarise(n=sum(count))
+      
+      write.csv2(df, file,row.names = FALSE)
+    }
+  )
+  
+  output$data2 <- downloadHandler(
+    
+    filename = function() {
+      "data.csv"
+    },
+    
+    content = function(file) {
+      
+      db=database()
+      db=melt(db[,c("ano",input$nivel2)],id="ano")
+      db=merge(db,cat[,c("label1","label2")],by.x="variable",by.y="label2",all.x=T)
+      
+      db$classif=switch(input$nivel,
+                        "Nível 1" = db$label1,
+                        "Nível 2" = db$variable
+      )
+      
+      df=db %>%
+        group_by(Ano=ano,Categoria=classif) %>%
+        summarise(n=sum(value))
+      
+      write.csv2(df, file,row.names = FALSE)
+    }
+  )
+  
+  output$data3 <- downloadHandler(
+    
+    filename = function() {
+      "data.csv"
+    },
+    
+    content = function(file) {
+      
+      df=database() %>% 
+        group_by(Ano=ano,Status=status1) %>% 
+        summarise(n=sum(count))
+      
+      write.csv2(df, file,row.names = FALSE)
+    }
+  )
+  
+  output$data4 <- downloadHandler(
+    
+    filename = function() {
+      "data.csv"
+    },
+    
+    content = function(file) {
+      
+      db=database()
+      
+      db$cat=switch(input$local,
+                    "Brasil" = db$brasil,
+                    "América" = db$america
+      )
+      
+      df=db %>% 
+        group_by(Ano=ano,Categoria=cat) %>% 
+        summarise(n=sum(count))
+      
+      df$Categoria=switch(input$local,
+        "Brasil" = ifelse(df$Categoria==1,"Brasil",ifelse(df$Categoria==0,"Outro país","Sem informação")),
+        "América" = ifelse(df$Categoria==1,"América",ifelse(df$Categoria==0,"Outro continente","Sem informação"))
+      )
+      
+      write.csv2(df, file,row.names = FALSE)
+    }
+  )
+  
+  output$data5 <- downloadHandler(
+    
+    filename = function() {
+      "data.csv"
+    },
+    
+    content = function(file) {
+      
+      df=database() %>% 
+        group_by(Ano=ano,`Presença Feminina`=feminino) %>% 
+        summarise(n=sum(count))
+      
+      df$`Presença Feminina`=ifelse(df$`Presença Feminina`==1,"Sim",
+                                    ifelse(df$`Presença Feminina`==0,"Não","Sem informação"))
+      
+      write.csv2(df, file,row.names = FALSE)
+    }
+  )
+  
+  output$data6 <- downloadHandler(
+    
+    filename = function() {
+      "data.csv"
+    },
+    
+    content = function(file) {
+      
+      df=database() %>% 
+        filter(brasil==1) %>% 
+        group_by(Ano=ano,Cooperação=cooperacao) %>% 
+        summarise(n=sum(count))
+      
+      df$Cooperação=ifelse(df$Cooperação==1,"Com cooperação internacional",
+                                    ifelse(df$Cooperação==0,"Sem cooperação internacional","Sem informação"))
       
       write.csv2(df, file,row.names = FALSE)
     }

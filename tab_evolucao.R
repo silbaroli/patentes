@@ -8,7 +8,7 @@ evolucao<-tabItem(tabName = "evolucao",
           withSpinner(plotlyOutput("plot1", width = 'auto', height = 600), type = 2)
         ),
         conditionalPanel(condition = "input.tp_plot=='Tabela'",
-          div(style = "overflow:scroll;header:fixed", DT::dataTableOutput("tab1",height=600))
+          div(style = "overflow:scroll;header:fixed", DT::dataTableOutput("tab1",height=400))
         )
       )
     )

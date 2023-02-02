@@ -1,8 +1,8 @@
 
 depositante<-tabItem(tabName = "depositante",
   box(width = 12,
-    conditionalPanel(condition = "input.tp_plot1=='Barras'",
-      column(width = 5,
+    column(width = 5,
+      conditionalPanel(condition = "input.tp_plot1=='Barras'",
         h5(radioButtons("select4","Indicador",choices = c("Número absoluto","Proporção"),inline = T),align="left")
       )
     ),
@@ -15,7 +15,12 @@ depositante<-tabItem(tabName = "depositante",
     fluidRow(
       box(width = 12,
         h4(htmlOutput("title_plot4", align = "center")),
-        withSpinner(plotlyOutput("plot4", width = 'auto', height = 600), type = 2)
+        conditionalPanel(condition = "input.tp_plot1!='Tabela'",
+          withSpinner(plotlyOutput("plot4", width = 'auto', height = 600), type = 2)
+        ),
+        conditionalPanel(condition = "input.tp_plot1=='Tabela'",
+          div(style = "overflow:scroll;header:fixed", DT::dataTableOutput("tab4",height=400))
+        )
       )
     )
   )
