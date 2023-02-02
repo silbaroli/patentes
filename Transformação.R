@@ -10,12 +10,12 @@ library(devtools)
 library(genderBR)
 library(gender)
 
-setwd("..")
+setwd("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
 
 #install("painel/pacotes/inpietl")
 library(inpietl)
 
-db=read.csv("painel/data-raw/patentes.csv",sep="#")
+db=read.csv("data-raw/patentes.csv",sep="#")
 
 
 # Paises ---------------------------------------------------------
@@ -583,24 +583,32 @@ db$sum=rowSums(db[,c(colnames(db)[str_detect(colnames(db),"iea")])])
 
 # Tipo de inventor ------------------------------------------------------
 
-## Removendo caracteres especiais da variável depositante
+## Removendo caracteres especiais da variável depositantes e inventores
 db$depositantes2=remove_caracter(db$depositantes)
-
-## Removendo os termos excedentes do nome do depositante que estão em parênteses
-db$depositantes2=sub(" \\(.*", "",db$depositantes2)
-
-## Removendo caracteres especiais da variável inventor
 db$inventores2=remove_caracter(db$inventores)
 
 ## Separando a variável inventores em múltiplas entradas
 db=db %>% separate(inventores2,into="inventores2",sep=", ")
 
+## Removendo os termos excedentes do nome do inventor que estão em parênteses
+db$inventores2=sub("@.*", "",db$inventores2)
+
+## Removendo acentos das variáveis inventores2 e depositantes2
+db$inventores2=stringi::stri_trans_general(db$inventores2,id = "Latin-ASCII")
+db$depositantes2=stringi::stri_trans_general(db$depositantes2,id = "Latin-ASCII")
+
 ## Criando variável para classificar se trata de pessoa física, considerando o nome do depositante vs inventor
-db$tp_pessoa=ifelse(db$depositantes2==db$inventores2,1,2)
+db$tp_pessoa=ifelse(str_detect(toupper(db$depositantes2),fixed(toupper(db$inventores2))),1,2)
 
 ## Atribuindo valor ignorado onde não há preenchido o nome do depositante ou inventor
 db$tp_pessoa=ifelse(db$depositantes=="" | db$inventores2=="" | db$depositantes=="nan",9,db$tp_pessoa)
 
+## Adicionando classificação por similaridade - criando os scores
+db$score1=RecordLinkage::levenshteinSim(db$depositantes2,db$inventores2) #similaridade entre os nomes do primeiro inventor/depositante
+db$score2=RecordLinkage::levenshteinSim(sub(" .*", "",db$depositantes),sub(" .*", "",db$inventores)) #similaridade entre o primeiro nome do inventor/depositante
+
+## Classificando os demais não categorizados como PF: scores acima de 0,7 e scores entre 0,5 e 0,7 e o do primeiro nome acima de 0,5
+db$tp_pessoa=ifelse(db$tp_pessoa==2 & db$score1>0.7 | (db$score1>0.5 & db$score1<=0.7 & db$score2>0.5),1,db$tp_pessoa)
 
 # Inventor feminino ------------------------------------------------------
 
@@ -635,10 +643,11 @@ db$feminino=ifelse(is.na(db$feminino),9,db$feminino)
 vars=c("numeroBusca","brasil","america","cooperacao","status1","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
        colnames(db)[str_detect(colnames(db),"iea")],"tp_pessoa","feminino")
 
-db2=db[,vars]
+vars2=c("numeroBusca","resumo","titulo","brasil","status1","listaClassificacaoInternacional","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
+       colnames(db)[str_detect(colnames(db),"iea")])
 
-write.csv(db2,"painel/data/database.csv",row.names = F)
-
+write.csv(db[,vars],"data/database.csv",row.names = F)
+write.csv(db[,vars2],"data/database2.csv",row.names = F)
 
 # 
 # names(df)[names(df) == 'old.var.name'] <- 'new.var.name'
@@ -647,8 +656,11 @@ write.csv(db2,"painel/data/database.csv",row.names = F)
 # 
 # names(cat)
 
+db$fundacao=ifelse(db$brasil==1 & str_detect(toupper(db$depositantes),paste(c("FAPE","FUNDA"),collapse = "|")),1,0)
+db$universidade=ifelse(db$brasil==1 & str_detect(toupper(db$depositantes),paste(c("UNIVER","FACULD","ESCOLA"),collapse = "|")),1,0)
+db$instituto=ifelse(db$brasil==1 & str_detect(toupper(db$depositantes),paste(c("INSTITU"),collapse = "|")),1,0)
 
-
+View(db[which(db$fundacao==0 & db$universidade==0 & db$instituto==0 & db$brasil==1 & db$tp_pessoa==2),])
 # Old ---------------------------------------------------------------------
 
 # Categoria IEA Nivel 1 ---------------------------------------------------
@@ -662,31 +674,31 @@ write.csv(db2,"painel/data/database.csv",row.names = F)
 
 #names(db2[,colnames(db2)[str_detect(colnames(db2),"iea")==F]])
 
-db2=melt(db[,vars],id=names(db2[,colnames(db2)[str_detect(colnames(db2),"iea")==F]]))
-db2$count=ifelse(duplicated(db2$numeroBusca)==F,1,0)
-
-db2$nivel1=substr(db2$variable,1,4)
-
-db2$nivel1=ifelse(db2$nivel1=="iea1","Eficiência Energética",
-                  ifelse(db2$nivel1=="iea2","Energias Fósseis: Petróleo, Gás Natural e Carvão Mineral",
-                         ifelse(db2$nivel1=="iea3","Fontes de Energia Renováveis",
-                                ifelse(db2$nivel1=="iea4","Fissão e Fusão Nuclear",
-                                       ifelse(db2$nivel1=="iea5","Hidrogênio e Células a Combustível",
-                                              ifelse(db2$nivel1=="iea6","Outras Tecnologias de Geração e Armazenamento de Energia",
-                                                     ifelse(db2$nivel1=="iea7","Outras Tecnologias e Pesquisas Transversais",NA)))))))
-
-db2$nivel2=factor(db2$variable,levels = unique(db2$variable),labels=c("Tecnologias de Eficiência Energética aplicadas à Industria",
-                                                                  "Tecnologias de Eficiência Energética aplicada a residências e estabelecimentos comerciais",
-                                                                  "Tecnologias de Eficiência Energética aplicadas ao setor de transporte rodoviário",
-                                                                  "Outras Tecnologias de Eficiência Energética","Energia solar","Energia Eólica",
-                                                                  "Energia dos Oceanos","Biocombustíveis","Energia Geotérmica","Hidroeletricidade",
-                                                                  "Fissão Nuclear","Fusão Nuclear","Outros fusão e fissão não alocados","Células a Combustível",
-                                                                  "Outras Tecnologias de Geração","Armazenamento de Energia"))
-
-
-
-db2$variable=NULL
-write.csv(db2,"database.csv",row.names = F)
+# db2=melt(db[,vars],id=names(db2[,colnames(db2)[str_detect(colnames(db2),"iea")==F]]))
+# db2$count=ifelse(duplicated(db2$numeroBusca)==F,1,0)
+# 
+# db2$nivel1=substr(db2$variable,1,4)
+# 
+# db2$nivel1=ifelse(db2$nivel1=="iea1","Eficiência Energética",
+#                   ifelse(db2$nivel1=="iea2","Energias Fósseis: Petróleo, Gás Natural e Carvão Mineral",
+#                          ifelse(db2$nivel1=="iea3","Fontes de Energia Renováveis",
+#                                 ifelse(db2$nivel1=="iea4","Fissão e Fusão Nuclear",
+#                                        ifelse(db2$nivel1=="iea5","Hidrogênio e Células a Combustível",
+#                                               ifelse(db2$nivel1=="iea6","Outras Tecnologias de Geração e Armazenamento de Energia",
+#                                                      ifelse(db2$nivel1=="iea7","Outras Tecnologias e Pesquisas Transversais",NA)))))))
+# 
+# db2$nivel2=factor(db2$variable,levels = unique(db2$variable),labels=c("Tecnologias de Eficiência Energética aplicadas à Industria",
+#                                                                   "Tecnologias de Eficiência Energética aplicada a residências e estabelecimentos comerciais",
+#                                                                   "Tecnologias de Eficiência Energética aplicadas ao setor de transporte rodoviário",
+#                                                                   "Outras Tecnologias de Eficiência Energética","Energia solar","Energia Eólica",
+#                                                                   "Energia dos Oceanos","Biocombustíveis","Energia Geotérmica","Hidroeletricidade",
+#                                                                   "Fissão Nuclear","Fusão Nuclear","Outros fusão e fissão não alocados","Células a Combustível",
+#                                                                   "Outras Tecnologias de Geração","Armazenamento de Energia"))
+# 
+# 
+# 
+# db2$variable=NULL
+# write.csv(db2,"database.csv",row.names = F)
 
 
 
