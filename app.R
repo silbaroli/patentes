@@ -280,7 +280,7 @@ server <- function(input, output, session) {
     } else if(input$tp_plot1=="Linhas"){
       yTitle="Número de patentes"
       
-      plot_ly(db1, x = ~date, y = ~count, color= ~cat,type = 'scatter', mode = 'lines',colors = colors) %>%
+      plot_ly(data.frame(db1), x = ~date, y = ~count, color= ~cat,type = 'scatter', mode = 'lines',colors = colors) %>%
         layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
                yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
         layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
@@ -346,7 +346,7 @@ server <- function(input, output, session) {
     } else if(input$tp_plot1=="Linhas"){
       yTitle="Número de patentes"
       
-      plot_ly(db1, x = ~date, y = ~count, color= ~cat,type = 'scatter', mode = 'lines',colors=colors) %>%
+      plot_ly(data.frame(db1), x = ~date, y = ~count, color= ~cat,type = 'scatter', mode = 'lines',colors=colors) %>%
         layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = F, linewidth = 1.1, linecolor = 'black'),
                yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
         layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
@@ -423,6 +423,7 @@ server <- function(input, output, session) {
     } else if(input$tp_plot1=="Linhas"){
       yTitle="Número de patentes"
       
+      db1=data.frame(db1)
       plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
         layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
                yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
@@ -491,6 +492,8 @@ server <- function(input, output, session) {
     } else if(input$tp_plot1=="Linhas"){
       yTitle="Número de patentes"
       
+      db1=data.frame(db1)
+      
       plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
         layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
                yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
@@ -553,6 +556,8 @@ server <- function(input, output, session) {
       } 
     } else if(input$tp_plot1=="Linhas"){
       yTitle="Número de patentes"
+      
+      db1=data.frame(db1)
       
       plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
         layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
