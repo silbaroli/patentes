@@ -4,12 +4,11 @@ source("tab_status.R")
 source("tab_depositante.R")
 source("tab_inventor.R")
 source("tab_colaboracao.R")
+source("tab_explorar.R")
 
 setwd("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
 
 cat=read.csv("categorias_iea.csv")
-
-options(spinner.color = "grey", spinner.color.background = "#ffffff", spinner.size = 2, shiny.reactlog=TRUE)
 
 page <- dashboardBody(
   fluidPage(
@@ -59,7 +58,7 @@ page <- dashboardBody(
                                   status = "primary"
                                 )
                ),
-               conditionalPanel(condition = "input.tab!='evolucao'",
+               conditionalPanel(condition = "input.tab!='evolucao' & input.tab!='explorar'",
                                 radioGroupButtons(
                                   inputId = "tp_plot1",
                                   label = NULL,
@@ -77,7 +76,8 @@ page <- dashboardBody(
       status,
       depositante,
       inventor,
-      colaboracao
+      colaboracao,
+      explorar
     )
   )
 )

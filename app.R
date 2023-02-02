@@ -35,7 +35,6 @@ server <- function(input, output, session) {
   
   database <- reactive({
     df<-read.csv("data/database.csv")
-    #df$count=1
     
     df <- rename(df,'Tecnologias de Eficiência Energética aplicadas à Industria'='iea11',
                 'Tecnologias de Eficiência Energética aplicada a residências e estabelecimentos comerciais'='iea12',
@@ -73,6 +72,45 @@ server <- function(input, output, session) {
     
   })
   
+  database2 <- reactive({
+    df2<-read.csv("data/database2.csv")
+    
+    df2 <- rename(df2,'Tecnologias de Eficiência Energética aplicadas à Industria'='iea11',
+                 'Tecnologias de Eficiência Energética aplicada a residências e estabelecimentos comerciais'='iea12',
+                 'Tecnologias de Eficiência Energética aplicadas ao setor de transporte rodoviário'='iea13',
+                 'Outras Tecnologias de Eficiência Energética'='iea14',
+                 'Energia solar'='iea31',
+                 'Energia Eólica'='iea32',
+                 'Energia dos Oceanos'='iea33',
+                 'Biocombustíveis'='iea34',
+                 'Energia Geotérmica'='iea35',
+                 'Hidroeletricidade'='iea36',
+                 'Fissão Nuclear'='iea41',
+                 'Fusão Nuclear'='iea42',
+                 'Outros fusão e fissão não alocados'='iea49',
+                 'Células a Combustível'='iea52',
+                 'Outras Tecnologias de Geração'='iea61',
+                 'Armazenamento de Energia'='iea63')
+    
+    if(length(input$nivel2)>1){
+      df2$count<-as.numeric(+(apply(df2[,c(input$nivel2)]==1,1,any)))
+    } else{
+      df2$count<-ifelse(df2[,input$nivel2]==1,1,0)
+    }
+    
+    df2$ano<-switch(input$tp_ano,
+                   "Pedido" = df2$ano_pedido,
+                   "Concessão" = df2$ano_concessao,
+                   "Deferimento" = df2$ano_deferimento,
+                   "Indeferimento" = df2$ano_indeferimento
+    )
+    
+    df2<-df2[which(df2$ano>=min(input$date) & df2$ano<=max(input$date)),]
+    df2<-df2 %>% filter(brasil %in% c(input$nacionalidade))
+    df2<-df2 %>% filter(status1 %in% c(input$status))
+    
+  })
+  
   output$title <- renderUI({
     
     if(input$tab=="evolucao"){
@@ -87,6 +125,8 @@ server <- function(input, output, session) {
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Perfil dos inventores","</div>")
     } else if(input$tab=="colaboracao"){
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Pedidos de patentes com cooperação internacional","</div>")
+    } else if(input$tab=="explorar"){
+      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Explorar os pedidos de patentes","</div>")
     }
     
     HTML(htmlText)
@@ -989,6 +1029,59 @@ server <- function(input, output, session) {
                   textAlign = "center",
                   wordWrap = "break-word") %>%
       formatStyle(columns = c(1),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "left",
+                  wordWrap = "break-word")
+    
+    
+    print(my.table)
+  })
+  
+  output$tab7 <- DT::renderDataTable({
+    
+    tab=database2()
+    tab=tab[which(tab$count==1),c("numeroBusca","titulo","ano_pedido","status1")]
+    #tab=db2[,c("numeroBusca","titulo","ano_pedido","status1")]
+    
+    
+    my.options <- list(autoWidth = FALSE,
+                       searching = FALSE,
+                       ordering = TRUE,
+                       lengthChange = FALSE,
+                       lengthMenu = FALSE,
+                       pageLength = FALSE,
+                       paging = FALSE,
+                       info = FALSE,
+                       buttons = c('copy', 'csv', 'excel', 'pdf'),
+                       rowsGroup = list(0))
+    
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    
+    header.names <- c("ID","Título","Ano de pedido","Situação atual")
+    
+    my.container <- withTags(table(
+      style(type = "text/css", header.style),
+      thead(
+        tr(
+          lapply(header.names, th, style = "text-align: left; border-right-width: 1px; border-right-style: solid; border-right-color: white; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: white")
+        )
+      )
+    ))
+    
+    
+    
+    my.table <- datatable(tab, options = my.options, container = my.container, rownames = F, width = '100%', extensions = 'Buttons') %>%
+      formatStyle(columns = c(1:ncol(tab)),
                   width = '100px',
                   fontFamily = "Calibri",
                   fontSize = "14px",
