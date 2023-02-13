@@ -60,15 +60,17 @@ server <- function(input, output, session) {
     }
     
     df$ano<-switch(input$tp_ano,
-      "Pedido" = df$ano_pedido,
-      "Concessão" = df$ano_concessao,
-      "Deferimento" = df$ano_deferimento,
-      "Indeferimento" = df$ano_indeferimento
+      "pedido" = df$ano_pedido,
+      "concessão" = df$ano_concessao,
+      "deferimento" = df$ano_deferimento,
+      "indeferimento" = df$ano_indeferimento
     )
     
     df<-df[which(df$ano>=min(input$date) & df$ano<=max(input$date)),]
-    df<-df %>% filter(brasil %in% c(input$nacionalidade))
     df<-df %>% filter(status1 %in% c(input$status))
+    df<-df %>% filter(str_detect(pais,paste(c(input$nacionalidade),collapse = "|")))
+    
+    
     
   })
   
@@ -99,10 +101,10 @@ server <- function(input, output, session) {
     }
     
     df2$ano<-switch(input$tp_ano,
-                   "Pedido" = df2$ano_pedido,
-                   "Concessão" = df2$ano_concessao,
-                   "Deferimento" = df2$ano_deferimento,
-                   "Indeferimento" = df2$ano_indeferimento
+                   "pedido" = df2$ano_pedido,
+                   "concessão" = df2$ano_concessao,
+                   "deferimento" = df2$ano_deferimento,
+                   "indeferimento" = df2$ano_indeferimento
     )
     
     df2<-df2[which(df2$ano>=min(input$date) & df2$ano<=max(input$date)),]
@@ -116,15 +118,15 @@ server <- function(input, output, session) {
     if(input$tab=="evolucao"){
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Evolução temporal dos pedidos de patentes","</div>")
     } else if(input$tab=="categoria"){
-      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Pedidos de patentes por categorias","</div>")
+      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Pedidos de patentes por classificação tecnológica","</div>")
     } else if(input$tab=="status"){
-      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Situação atual dos pedidos de patentes","</div>")
-    } else if(input$tab=="depositante"){
-      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Perfil dos depositantes","</div>")
+      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Situação dos pedidos de patentes","</div>")
+    } else if(input$tab=="localizacao" | input$tab=="tp_pessoa"){
+      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Perfil do depositante","</div>")
     } else if(input$tab=="inventor"){
-      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Perfil dos inventores","</div>")
-    } else if(input$tab=="colaboracao"){
-      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Pedidos de patentes com cooperação internacional","</div>")
+      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Perfil do inventore","</div>")
+    } else if(input$tab=="cooperacao"){
+      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Cooperação entre os pedidos de patentes","</div>")
     } else if(input$tab=="explorar"){
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Explorar os pedidos de patentes","</div>")
     }
@@ -133,43 +135,57 @@ server <- function(input, output, session) {
   })
   
   output$title_plot1 <- renderUI({
-    htmlText = paste0("Número de patentes depositadas por ano", ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano,", ", min(input$date)," a ",max(input$date))
+    htmlText = paste0("Número de patentes depositadas por ano", ifelse(input$tp_ano=="concessão"," da "," do "),input$tp_ano,", ", min(input$date)," a ",max(input$date))
     
     HTML(htmlText)
   })
   
   output$title_plot2 <- renderUI({
     if(input$tp_plot1!="Setor"){
-      htmlText = paste0("Número de patentes depositadas segundo classificação tecnológica por ano", ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano," ,",min(input$date)," a ",max(input$date))
+      htmlText = paste0("Número de patentes depositadas segundo classificação tecnológica por ano", ifelse(input$tp_ano=="concessão"," da "," do "),input$tp_ano," ,",min(input$date)," a ",max(input$date))
     } else {
       htmlText = paste0("Distribuição proporcional das patentes depositadas segundo classificação tecnológica, ",min(input$date)," a ",max(input$date))
     }
-    
     HTML(htmlText)
   })
   
   output$title_plot3 <- renderUI({
     if(input$tp_plot1!="Setor"){
-      htmlText = paste0("Número de patentes depositadas segundo status por ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      htmlText = paste0("Número de patentes depositadas segundo status por ano",ifelse(input$tp_ano=="concessão"," da "," do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
     } else{
       htmlText = paste0("Distribuição proporcional das patentes depositadas segundo status, ",min(input$date)," a ",max(input$date))
     }
     HTML(htmlText)
   })
   
-  output$title_plot4 <- renderUI({
+  output$title_plot4.1 <- renderUI({
     if(input$tp_plot1=="Barras" | input$tp_plot1=="Linhas"){
-      htmlText = paste0(ifelse(input$select4=="Número absoluto","Número de patentes ","Distribuição proporcional das patentes "),
+      htmlText = paste0(ifelse(input$select4.1=="Número absoluto","Número de patentes ","Distribuição proporcional das patentes "),
                         "depositadas por inventores com nacionalidade ",
                         ifelse(input$local=="Brasil","brasileira","de algum país das Américas")," por ano ",
-                        ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
     } else if(input$tp_plot1=="Tabela"){
       htmlText = paste0("Número de patentes depositadas por inventores com nacionalidade ",
                         ifelse(input$local=="Brasil","brasileira","de algum país das Américas")," por ano ",
-                        ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
     } else if(input$tp_plot1=="Setor"){
       htmlText = paste0("Distribuição proporcional das patentes depositadas por inventores com nacionalidade ",
                         ifelse(input$local=="Brasil","brasileira","de algum país das Américas"),", ",min(input$date)," a ",max(input$date))
+    }
+    
+    HTML(htmlText)
+  })
+  
+  output$title_plot4.2 <- renderUI({
+    if(input$tp_plot1=="Barras" | input$tp_plot1=="Linhas"){
+      htmlText = paste0(ifelse(input$select4.2=="Número absoluto","Número de patentes ","Distribuição proporcional das patentes "),
+                        "depositadas por tipo de classificação por ano ",
+                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+    } else if(input$tp_plot1=="Tabela"){
+      htmlText = paste0("Número de patentes depositadas por tipo de classificação por ano ",
+                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+    } else if(input$tp_plot1=="Setor"){
+      htmlText = paste0("Distribuição proporcional das patentes depositadas por tipo de classificação, ",min(input$date)," a ",max(input$date))
     }
     
     HTML(htmlText)
@@ -179,11 +195,11 @@ server <- function(input, output, session) {
     if(input$tp_plot1=="Barras" | input$tp_plot1=="Linhas"){
       htmlText = paste0(ifelse(input$select5=="Proporção",
                                "Distribuição proporcional das patentes depositadas segundo presença feminina entre os inventores por ano ",
-                               "Número de patentes depositadas com algum inventor do sexo feminino por ano "),
-                        ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+                               "Número de patentes depositadas com a presença de inventor do sexo feminino por ano "),
+                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
     } else if(input$tp_plot1=="Tabela"){
-      htmlText = paste0("Número de patentes depositadas com algum inventor do sexo feminino por ano ",
-                        ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      htmlText = paste0("Número de patentes depositadas com a presença de inventor do sexo feminino por ano ",
+                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
     } else if(input$tp_plot1=="Setor"){
       htmlText = paste0("Distribuição proporcional das patentes depositadas segundo presença feminina entre os inventores, ",min(input$date)," a ",max(input$date))
     }
@@ -194,14 +210,14 @@ server <- function(input, output, session) {
   output$title_plot6 <- renderUI({
     if(input$tp_plot1=="Barras" | input$tp_plot1=="Linhas"){
       htmlText = paste0(ifelse(input$select6=="Proporção",
-                               "Distribuição proporcional das patentes de inventores brasileiros segundo cooperação internacional por ano ",
-                               "Número de patentes depositadas  por inventores brasileiros com cooperação internacional por ano "),
+                               "Distribuição proporcional das patentes depositadas por inventores brasileiros com cooperação internacional por ano ",
+                               "Número de patentes depositadas por inventores brasileiros com cooperação internacional por ano "),
                         ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
     } else if(input$tp_plot1=="Tabela"){
       htmlText = paste0("Número de patentes depositadas por inventores brasileiros com cooperação internacional por ano ",
                         ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
     } else if(input$tp_plot1=="Setor"){
-      htmlText = paste0("Distribuição proporcional das patentes de inventores brasileiros segundo cooperação internacional, ",min(input$date)," a ",max(input$date))
+      htmlText = paste0("Distribuição proporcional das patentes depositadas por inventores brasileiros com cooperação internacional, ",min(input$date)," a ",max(input$date))
     }
     
     HTML(htmlText)
@@ -218,10 +234,10 @@ server <- function(input, output, session) {
     
     
     xTitle=switch (input$tp_ano,
-      "Pedido" = "Ano do pedido",
-      "Concessão" = "Ano da concessão",
-      "Deferimento" = "Ano do deferimento",
-      "Indeferimento" = "Ano do indeferimento"
+      "pedido" = "Ano do pedido",
+      "concessão" = "Ano da concessão",
+      "deferimento" = "Ano do deferimento",
+      "indeferimento" = "Ano do indeferimento"
     )
     
     
@@ -291,10 +307,10 @@ server <- function(input, output, session) {
     }
     
     xTitle=switch (input$tp_ano,
-                   "Pedido" = "Ano do pedido",
-                   "Concessão" = "Ano da concessão",
-                   "Deferimento" = "Ano do deferimento",
-                   "Indeferimento" = "Ano do indeferimento"
+                   "pedido" = "Ano do pedido",
+                   "concessão" = "Ano da concessão",
+                   "deferimento" = "Ano do deferimento",
+                   "indeferimento" = "Ano do indeferimento"
     )
     
     if(input$tp_plot1=="Barras"){
@@ -357,10 +373,10 @@ server <- function(input, output, session) {
              "anulada"="#cab2d6","sem informação"="#999999")
     
     xTitle=switch (input$tp_ano,
-                   "Pedido" = "Ano do pedido",
-                   "Concessão" = "Ano da concessão",
-                   "Deferimento" = "Ano do deferimento",
-                   "Indeferimento" = "Ano do indeferimento"
+                   "pedido" = "Ano do pedido",
+                   "concessão" = "Ano da concessão",
+                   "deferimento" = "Ano do deferimento",
+                   "indeferimento" = "Ano do indeferimento"
     )
     
     if(input$tp_plot1=="Barras"){
@@ -405,7 +421,7 @@ server <- function(input, output, session) {
     }
   })
   
-  output$plot4 <- renderPlotly({
+  output$plot4.1 <- renderPlotly({
     mrg <- list(l = 50, r = 50,
                 b = 50, t = 10,
                 pad = 5)
@@ -428,14 +444,14 @@ server <- function(input, output, session) {
     }
     
     xTitle=switch (input$tp_ano,
-                   "Pedido" = "Ano do pedido",
-                   "Concessão" = "Ano da concessão",
-                   "Deferimento" = "Ano do deferimento",
-                   "Indeferimento" = "Ano do indeferimento"
+                   "pedido" = "Ano do pedido",
+                   "concessão" = "Ano da concessão",
+                   "deferimento" = "Ano do deferimento",
+                   "indeferimento" = "Ano do indeferimento"
     )
     
     if(input$tp_plot1=="Barras"){
-      if(input$select4=="Número absoluto"){
+      if(input$select4.1=="Número absoluto"){
         yTitle="Número de patentes"
         
         plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'bar',marker = list(color = 'rgb(0,82,102)')) %>%
@@ -443,7 +459,7 @@ server <- function(input, output, session) {
                  yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
           layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
           layout(yaxis = list(tickformat = ".0f"))
-      } else if(input$select4=="Proporção"){
+      } else if(input$select4.1=="Proporção"){
         
         db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c(
           ifelse(input$local=="Brasil","Brasil","América"),
@@ -484,6 +500,70 @@ server <- function(input, output, session) {
       }
   })
   
+  output$plot4.2 <- renderPlotly({
+    mrg <- list(l = 50, r = 50,
+                b = 50, t = 10,
+                pad = 5)
+    
+    db1=database() %>% 
+      group_by(date=ano,cat=tp_pessoa) %>% 
+      summarise(count=sum(count))
+    
+    
+    db1$per=NA
+    for(i in unique(db1$date)){
+      db1[db1$date==i,]$per=round(db1[db1$date==i,]$count/sum(db1[db1$date==i,]$count)*100,1)
+    }
+    
+    xTitle=switch (input$tp_ano,
+                   "pedido" = "Ano do pedido",
+                   "concessão" = "Ano da concessão",
+                   "deferimento" = "Ano do deferimento",
+                   "indeferimento" = "Ano do indeferimento"
+    )
+    
+    if(input$tp_plot1=="Barras"){
+      if(input$select4.2=="Número absoluto"){
+        yTitle="Número de patentes"
+        
+        plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'bar',marker = list(color = 'rgb(0,82,102)')) %>%
+          layout(xaxis = list(title = xTitle, showgrid = FALSE),
+                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
+          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
+          layout(yaxis = list(tickformat = ".0f"))
+      } else if(input$select4.2=="Proporção"){
+        
+        db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c("Pessoa física","Não pessoa física","Sem informação de país"))
+        
+        yTitle="Proporção"
+        
+        plot_ly(db1, x = ~date, y = ~per, type = 'bar',color = ~cat) %>%
+          layout(xaxis = list(title = xTitle, showgrid = FALSE),
+                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
+          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
+          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
+          layout(yaxis = list(tickformat = ".0f%"))
+      } 
+    } else if(input$tp_plot1=="Linhas"){
+      yTitle="Número de patentes"
+      
+      db1=data.frame(db1)
+      plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
+        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
+               yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
+        layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
+        layout(yaxis = list(tickformat = ".0f"))
+    } else if(input$tp_plot1=="Setor"){
+      db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c("Pessoa física","Não pessoa física","Sem informação de país"))
+      
+      plot_ly(data=db1,labels = ~ cat, values = ~count) %>% 
+        add_pie(hole = 0.6)%>% 
+        layout(showlegend = F,
+               xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+               yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+    }
+  })
+  
   output$plot5 <- renderPlotly({
     mrg <- list(l = 50, r = 50,
                 b = 50, t = 10,
@@ -501,10 +581,10 @@ server <- function(input, output, session) {
     }
     
     xTitle=switch (input$tp_ano,
-                   "Pedido" = "Ano do pedido",
-                   "Concessão" = "Ano da concessão",
-                   "Deferimento" = "Ano do deferimento",
-                   "Indeferimento" = "Ano do indeferimento"
+                   "pedido" = "Ano do pedido",
+                   "concessão" = "Ano da concessão",
+                   "deferimento" = "Ano do deferimento",
+                   "indeferimento" = "Ano do indeferimento"
     )
     
     if(input$tp_plot1=="Barras"){
@@ -557,7 +637,7 @@ server <- function(input, output, session) {
     
     db1=database() %>% 
       filter(brasil==1) %>% 
-      group_by(date=ano,cat=cooperacao) %>% 
+      group_by(date=ano,cat=cooper_int) %>% 
       summarise(count=sum(count))
     
     db1$per=NA
@@ -566,10 +646,10 @@ server <- function(input, output, session) {
     }
     
     xTitle=switch (input$tp_ano,
-                   "Pedido" = "Ano do pedido",
-                   "Concessão" = "Ano da concessão",
-                   "Deferimento" = "Ano do deferimento",
-                   "Indeferimento" = "Ano do indeferimento"
+                   "pedido" = "Ano do pedido",
+                   "concessão" = "Ano da concessão",
+                   "deferimento" = "Ano do deferimento",
+                   "indeferimento" = "Ano do indeferimento"
     )
     
     if(input$tp_plot1=="Barras"){
@@ -825,7 +905,7 @@ server <- function(input, output, session) {
     print(my.table)
   })
   
-  output$tab4 <- DT::renderDataTable({
+  output$tab4.1 <- DT::renderDataTable({
     db=database()
     db$cat=switch(input$local,
                   "Brasil" = db$brasil,
@@ -904,13 +984,84 @@ server <- function(input, output, session) {
     print(my.table)
   })
   
+  output$tab4.2 <- DT::renderDataTable({
+    
+    tab=database() %>% 
+      group_by(date=ano,cat=tp_pessoa) %>% 
+      summarise(count=sum(count))
+    
+    tab$cat=factor(tab$cat,levels=c(1,0,9),labels=c("Pessoa física","Não pessoa física","Sem informação"))
+    
+    tab=reshape2::dcast(tab,date~cat,value.var = "count")
+    
+    my.options <- list(autoWidth = FALSE,
+                       searching = FALSE,
+                       ordering = TRUE,
+                       lengthChange = FALSE,
+                       lengthMenu = FALSE,
+                       pageLength = FALSE,
+                       paging = FALSE,
+                       info = FALSE,
+                       buttons = c('copy', 'csv', 'excel', 'pdf'),
+                       rowsGroup = list(0))
+    
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    
+    header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
+                      names(tab)[-1])
+    
+    my.container <- withTags(table(
+      style(type = "text/css", header.style),
+      thead(
+        tr(
+          lapply(header.names, th, style = "text-align: center; border-right-width: 1px; border-right-style: solid; border-right-color: white; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: white")
+        )
+      )
+    ))
+    
+    
+    
+    my.table <- datatable(tab, options = my.options, container = my.container, rownames = F, width = '100%', extensions = 'Buttons') %>%
+      formatStyle(columns = c(2:ncol(tab)),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "center",
+                  wordWrap = "break-word") %>%
+      formatStyle(columns = c(1),
+                  width = '100px',
+                  fontFamily = "Calibri",
+                  fontSize = "14px",
+                  borderRightWidth = "1px",
+                  borderRightStyle = "solid",
+                  borderRightColor = "white",
+                  borderBottomColor = "#ffffff",
+                  borderBottomStyle = "solid",
+                  borderBottomWidth = "1px",
+                  borderCollapse = "collapse",
+                  verticalAlign = "middle",
+                  textAlign = "left",
+                  wordWrap = "break-word")
+    
+    
+    print(my.table)
+  })
+  
   output$tab5 <- DT::renderDataTable({
     
     tab=database() %>% 
       group_by(date=ano,cat=feminino) %>% 
       summarise(count=sum(count))
     
-    tab$cat=ifelse(tab$cat==1,"Presença Feminina",ifelse(tab$cat==0,"Ausência Feminina","Sem informação"))
+    tab$cat=factor(tab$cat,levels=c(1,0,9),labels=c("Presença Feminina","Ausência Feminina","Sem informação"))
     
     tab=reshape2::dcast(tab,date~cat,value.var = "count")
     
@@ -979,10 +1130,10 @@ server <- function(input, output, session) {
     
     tab=database() %>% 
       filter(brasil==1) %>% 
-      group_by(date=ano,cat=cooperacao) %>% 
+      group_by(date=ano,cat=cooper_int) %>% 
       summarise(count=sum(count))
     
-    tab$cat=ifelse(tab$cat==1,"Com cooperação internacional",ifelse(tab$cat==0,"Sem cooperação internacional","Sem informação"))
+    tab$cat=factor(tab$cat,levels=c(1,0,9),labels=c("Com cooperação internacional","Sem cooperação internacional","Sem informação"))
     
     tab=reshape2::dcast(tab,date~cat,value.var = "count")
     
@@ -1051,7 +1202,6 @@ server <- function(input, output, session) {
     
     tab=database2()
     tab=tab[which(tab$count==1),c("numeroBusca","titulo","ano_pedido","status1")]
-    #tab=db2[,c("numeroBusca","titulo","ano_pedido","status1")]
     
     
     my.options <- list(autoWidth = FALSE,
@@ -1109,7 +1259,7 @@ server <- function(input, output, session) {
     content = function(file) {
       
       df=database() %>%
-        group_by(Ano) %>%
+        group_by(ano) %>%
         summarise(n=sum(count))
       
       write.csv2(df, file,row.names = FALSE)
@@ -1157,7 +1307,7 @@ server <- function(input, output, session) {
     }
   )
   
-  output$data4 <- downloadHandler(
+  output$data4.1 <- downloadHandler(
     
     filename = function() {
       "data.csv"
@@ -1180,6 +1330,24 @@ server <- function(input, output, session) {
         "Brasil" = ifelse(df$Categoria==1,"Brasil",ifelse(df$Categoria==0,"Outro país","Sem informação")),
         "América" = ifelse(df$Categoria==1,"América",ifelse(df$Categoria==0,"Outro continente","Sem informação"))
       )
+      
+      write.csv2(df, file,row.names = FALSE)
+    }
+  )
+  
+  output$data4.2 <- downloadHandler(
+    
+    filename = function() {
+      "data.csv"
+    },
+    
+    content = function(file) {
+      
+      df=database() %>% 
+        group_by(Ano=ano,Categoria=tp_pessoa) %>% 
+        summarise(n=sum(count))
+      
+      df$Categoria=ifelse(df$Categoria==1,"Pessoa física",ifelse(df$Categoria==0,"Não pessoa física","Sem informação"))
       
       write.csv2(df, file,row.names = FALSE)
     }
@@ -1214,7 +1382,7 @@ server <- function(input, output, session) {
       
       df=database() %>% 
         filter(brasil==1) %>% 
-        group_by(Ano=ano,Cooperação=cooperacao) %>% 
+        group_by(Ano=ano,Cooperação=cooper_int) %>% 
         summarise(n=sum(count))
       
       df$Cooperação=ifelse(df$Cooperação==1,"Com cooperação internacional",

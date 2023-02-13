@@ -1,5 +1,6 @@
 library(ggplot2)
 library(stringr)
+library(stringi)
 library(tidyverse)
 library(reshape2)
 library(lubridate)
@@ -59,6 +60,10 @@ for(i in colnames(db)[str_detect(colnames(db),"pais_")]){
   db[,i]=substr(db[,i],1,2)
 }
 
+
+db[which(str_detect(db$pais,paste(excluir, collapse = "|"))),]$pais=NA
+db$pais=ifelse(db$pais=="CHINA","CN",db$pais)
+db$pais=ifelse(substr(db$pais,1,2)==substr(db$pais,4,6),substr(db$pais,1,2),db$pais)
 
 # UF ----------------------------------------------------------------------
 
@@ -137,13 +142,16 @@ db$america=ifelse(str_detect(db$pais,paste(america,collapse = "|")),1,0)
 db$america=ifelse(db$paises=="" | db$paises=="[]",9,db$america)
 
 
+# Cooperação nacional -----------------------------------------------------
+
+
 # Cooperação internacional ------------------------------------------------
 
 ## Definindo variável para identificar patentes de inventores do Brasil com cooperação de outros países
 db$inter=+(apply(db[,colnames(db)[str_detect(colnames(db),"pais_")]]!="BR",1,any))
 db$inter=ifelse(is.na(db$inter)==T,0,db$inter)
 
-db$cooperacao=ifelse(db$brasil==1 & db$inter==1,1,
+db$cooper_int=ifelse(db$brasil==1 & db$inter==1,1,
                      ifelse(db$brasil==1 & db$inter==0,0,NA))
 
 
@@ -598,7 +606,7 @@ db$inventores2=stringi::stri_trans_general(db$inventores2,id = "Latin-ASCII")
 db$depositantes2=stringi::stri_trans_general(db$depositantes2,id = "Latin-ASCII")
 
 ## Criando variável para classificar se trata de pessoa física, considerando o nome do depositante vs inventor
-db$tp_pessoa=ifelse(str_detect(toupper(db$depositantes2),fixed(toupper(db$inventores2))),1,2)
+db$tp_pessoa=ifelse(str_detect(toupper(db$depositantes2),fixed(toupper(db$inventores2))),1,0)
 
 ## Atribuindo valor ignorado onde não há preenchido o nome do depositante ou inventor
 db$tp_pessoa=ifelse(db$depositantes=="" | db$inventores2=="" | db$depositantes=="nan",9,db$tp_pessoa)
@@ -608,7 +616,7 @@ db$score1=RecordLinkage::levenshteinSim(db$depositantes2,db$inventores2) #simila
 db$score2=RecordLinkage::levenshteinSim(sub(" .*", "",db$depositantes),sub(" .*", "",db$inventores)) #similaridade entre o primeiro nome do inventor/depositante
 
 ## Classificando os demais não categorizados como PF: scores acima de 0,7 e scores entre 0,5 e 0,7 e o do primeiro nome acima de 0,5
-db$tp_pessoa=ifelse(db$tp_pessoa==2 & db$score1>0.7 | (db$score1>0.5 & db$score1<=0.7 & db$score2>0.5),1,db$tp_pessoa)
+db$tp_pessoa=ifelse(db$tp_pessoa==0 & db$score1>0.7 | (db$score1>0.5 & db$score1<=0.7 & db$score2>0.5),1,db$tp_pessoa)
 
 # Inventor feminino ------------------------------------------------------
 
@@ -640,7 +648,7 @@ db$feminino=ifelse(is.na(db$feminino),9,db$feminino)
 # Database Final ----------------------------------------------------------
 
 ## Definição das variáveis que irão compor a base de dados
-vars=c("numeroBusca","brasil","america","cooperacao","status1","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
+vars=c("numeroBusca","brasil","america","cooper_int","status1","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
        colnames(db)[str_detect(colnames(db),"iea")],"tp_pessoa","feminino")
 
 vars2=c("numeroBusca","resumo","titulo","brasil","status1","listaClassificacaoInternacional","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
@@ -656,9 +664,12 @@ write.csv(db[,vars2],"data/database2.csv",row.names = F)
 # 
 # names(cat)
 
-db$fundacao=ifelse(db$brasil==1 & str_detect(toupper(db$depositantes),paste(c("FAPE","FUNDA"),collapse = "|")),1,0)
-db$universidade=ifelse(db$brasil==1 & str_detect(toupper(db$depositantes),paste(c("UNIVER","FACULD","ESCOLA"),collapse = "|")),1,0)
-db$instituto=ifelse(db$brasil==1 & str_detect(toupper(db$depositantes),paste(c("INSTITU"),collapse = "|")),1,0)
+db$fundacao=ifelse(db$brasil==1 & str_detect(toupper(stri_trans_general(db$depositantes,id = "Latin-ASCII")),paste(c("FAPE","FUNDA"),collapse = "|")),1,0)
+db$universidade=ifelse(db$brasil==1 & str_detect(toupper(stri_trans_general(db$depositantes,id = "Latin-ASCII")),paste(c("UNIVER","FACULD","ESCOLA"),collapse = "|")),1,0)
+db$instituto=ifelse(db$brasil==1 & str_detect(toupper(stri_trans_general(db$depositantes,id = "Latin-ASCII")),paste(c("INSTITU"),collapse = "|")),1,0)
+db$sociedade=ifelse(db$brasil==1 & str_detect(toupper(stri_trans_general(db$depositantes,id = "Latin-ASCII")),paste(c("SOCIEDAD"),collapse = "|")),1,0)
+db$associacao=ifelse(db$brasil==1 & str_detect(toupper(stri_trans_general(db$depositantes,id = "Latin-ASCII")),paste(c("ASSOCIACAO"),collapse = "|")),1,0)
+
 
 View(db[which(db$fundacao==0 & db$universidade==0 & db$instituto==0 & db$brasil==1 & db$tp_pessoa==2),])
 # Old ---------------------------------------------------------------------

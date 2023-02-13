@@ -1,10 +1,12 @@
 source("tab_evolucao.R")
 source("tab_categoria.R")
 source("tab_status.R")
-source("tab_depositante.R")
+source("tab_depositante1.R")
+source("tab_depositante2.R")
 source("tab_inventor.R")
-source("tab_colaboracao.R")
+source("tab_cooperacao.R")
 source("tab_explorar.R")
+source("countries.R")
 
 setwd("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
 
@@ -24,8 +26,8 @@ page <- dashboardBody(
                        options = list(`actions-box` = TRUE,`deselect-all-text` = "Desmarcar todas",`select-all-text` = "Marcar todas",size = 10,`selected-text-format` = "count > 3"),multiple = T,selected = unique(cat$label2)))  
       ),
       column(width = 2,
-        h4(pickerInput("tp_ano","Ano",choices = c("Pedido","Concessão","Deferimento","Indeferimento"),
-                       options = list(`actions-box` = TRUE,`deselect-all-text` = "Desmarcar todas",`select-all-text` = "Marcar todas",size = 10,`selected-text-format` = "count > 3"),multiple = F,selected = "Pedido"))
+        h4(pickerInput("tp_ano","Ano",choices = c("Pedido"="pedido","Concessão"="concessão","Deferimento"="deferimento","Indeferimento"="indeferimento"),
+                       options = list(`actions-box` = TRUE,`deselect-all-text` = "Desmarcar todas",`select-all-text` = "Marcar todas",size = 10,`selected-text-format` = "count > 3"),multiple = F,selected = "pedido"))
       ),
       column(width = 2,
         h4(pickerInput("status","Situação",choices = c("Deferida"="deferida","Concedida"="concedida",
@@ -37,8 +39,8 @@ page <- dashboardBody(
       ),
       column(width = 2,
         conditionalPanel(condition = "input.tab!='colaboracao'",
-          h4(pickerInput("nacionalidade","Nacionalidade",choices = c("Brasileira"="1","Estrangeira"="0","Sem informação"="9"),
-                         options = list(`actions-box` = TRUE,`deselect-all-text` = "Desmarcar todas",`select-all-text` = "Marcar todas",size = 10,`selected-text-format` = "count > 3"),multiple = T,selected = c("1","0","9")))
+          h4(pickerInput("nacionalidade","Origem",choices = countries,
+                         options = list(`actions-box` = TRUE,`deselect-all-text` = "Desmarcar todas",`select-all-text` = "Marcar todas",size = 10,`selected-text-format` = "count > 3"),multiple = T,selected = countries))
         )
       )
     ),
@@ -74,9 +76,10 @@ page <- dashboardBody(
       evolucao,
       categoria,
       status,
-      depositante,
+      localizacao,
+      tp_pessoa,
       inventor,
-      colaboracao,
+      cooperacao,
       explorar
     )
   )
