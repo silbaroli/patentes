@@ -13,7 +13,7 @@ library(gender)
 
 setwd("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
 
-#install("painel/pacotes/inpietl")
+#install("pacotes/inpietl")
 library(inpietl)
 
 db=read.csv("data-raw/patentes.csv",sep="#")
@@ -118,9 +118,13 @@ db$uf_7=ifelse(db$uf_7==db$uf_6,NA,db$uf_7)
 db$uf_5=NULL
 db$uf_6=NULL
 db$uf_7=NULL
-########################################################
-########################################################
 
+db$uf_1=ifelse(db$uf_1=="",NA,db$uf_1)
+db$uf_2=ifelse(db$uf_2=="",NA,db$uf_2)
+db$uf_3=ifelse(db$uf_3=="",NA,db$uf_3)
+db$uf_4=ifelse(db$uf_4=="",NA,db$uf_4)
+########################################################
+########################################################
 
 # Nacionalidade -----------------------------------------------------------
 
@@ -140,10 +144,22 @@ america=c("AI","AG","AR","AW","BS","BB","BZ","BM","BO","XA","VG","BR","CA","KY",
 
 db$america=ifelse(str_detect(db$pais,paste(america,collapse = "|")),1,0)
 db$america=ifelse(db$paises=="" | db$paises=="[]",9,db$america)
+db$america=ifelse(is.na(db$america),9,db$america)
 
 
 # Cooperação nacional -----------------------------------------------------
 
+
+for(i in colnames(db)[str_detect(colnames(db),"uf_")]){
+  db[,i]=ifelse(is.na(db[,i]),0,1)
+}
+
+#somando o número de preenchidos nas variáveis UF (valores acima de 1 indica a presença de mais de uma UF)
+db$cooper_nac=rowSums(db[,c(colnames(db)[str_detect(colnames(db),"uf_")])])
+db$cooper_nac=ifelse(db$cooper_nac>1 & db$brasil==1,1,ifelse(db$cooper_nac==1 & db$brasil==1,0,9))
+
+#Apagando todas as variáveis uf auxiliares
+db[,c(colnames(db)[str_detect(colnames(db),"uf_")])]=NULL
 
 # Cooperação internacional ------------------------------------------------
 
@@ -154,6 +170,11 @@ db$inter=ifelse(is.na(db$inter)==T,0,db$inter)
 db$cooper_int=ifelse(db$brasil==1 & db$inter==1,1,
                      ifelse(db$brasil==1 & db$inter==0,0,NA))
 
+
+
+# UF ----------------------------------------------------------------------
+
+db$uf=ifelse(db$brasil==1,db$pais,NA)
 
 # Status ---------------------------------------------------------
 
@@ -648,10 +669,10 @@ db$feminino=ifelse(is.na(db$feminino),9,db$feminino)
 # Database Final ----------------------------------------------------------
 
 ## Definição das variáveis que irão compor a base de dados
-vars=c("numeroBusca","brasil","america","cooper_int","status1","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
+vars=c("numeroBusca","brasil","uf","america","cooper_nac","cooper_int","status1","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
        colnames(db)[str_detect(colnames(db),"iea")],"tp_pessoa","feminino")
 
-vars2=c("numeroBusca","resumo","titulo","brasil","status1","listaClassificacaoInternacional","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
+vars2=c("numeroBusca","resumo","titulo","brasil","uf","status1","listaClassificacaoInternacional","pais","ano_pedido","ano_deferimento","ano_concessao","ano_indeferimento",
        colnames(db)[str_detect(colnames(db),"iea")])
 
 write.csv(db[,vars],"data/database.csv",row.names = F)

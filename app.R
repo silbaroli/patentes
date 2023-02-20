@@ -4,22 +4,25 @@ library(shinydashboard)
 library(shinycssloaders)
 library(shinyWidgets)
 library(shinyjs)
+#library(shinycustomloader)
 library(DT)
 library(ggplot2)
+library(ggiraph)
 library(plotly)
 library(stringr)
 library(lubridate)
 library(dplyr)
 library(reshape2)
+library(openxlsx)
 
-options(spinner.color = "grey", spinner.color.background = "#ffffff", spinner.size = 2, shiny.reactlog=TRUE)
+
+options(spinner.color = "#7197A4", spinner.color.background = "#ffffff", spinner.size = 2, shiny.reactlog=TRUE)
 
 
 setwd("/Users/silvanooliveira/Google Drive/Meu Drive/Consultoria/CEPAL/painel/")
 source("sidebar.R")
 source("header.R")
 source("page.R")
-
 
 ui <- dashboardPage(header,sidebar,page)
 
@@ -32,6 +35,76 @@ server <- function(input, output, session) {
                       choices = unique(cat$label2))
     
   }, ignoreInit = TRUE)
+  
+  observeEvent(input$tp_plot1,{
+    req(input$tp_plot1=="Download")
+    
+    showModal(modalDialog(
+      selectInput("format1","Formato:",c(".csv",".xlsx")),
+      downloadButton("data1", label = "Download", class = NULL,icon = icon("download")),
+      easyClose = TRUE,footer = NULL
+    ))}
+  )
+  
+  observeEvent(input$tp_plot2,{
+    req(input$tp_plot2=="Download")
+    
+    showModal(modalDialog(
+      selectInput("format2","Formato:",c(".csv",".xlsx")),
+      downloadButton("data2", label = "Download", class = NULL,icon = icon("download")),
+      easyClose = TRUE,footer = NULL
+    ))}
+  )
+  
+  observeEvent(input$tp_plot3,{
+    req(input$tp_plot3=="Download")
+    
+    showModal(modalDialog(
+      selectInput("format3","Formato:",c(".csv",".xlsx")),
+      downloadButton("data3", label = "Download", class = NULL,icon = icon("download")),
+      easyClose = TRUE,footer = NULL
+    ))}
+  )
+  
+  observeEvent(input$tp_plot41,{
+    req(input$tp_plot41=="Download")
+
+    showModal(modalDialog(
+      selectInput("format4.1","Formato:",c(".csv",".xlsx")),
+      downloadButton("data4.1", label = "Download", class = NULL,icon = icon("download")),
+      easyClose = TRUE,footer = NULL
+    ))}
+  )
+  
+  observeEvent(input$tp_plot42,{
+    req(input$tp_plot42=="Download")
+
+    showModal(modalDialog(
+      selectInput("format4.2","Formato:",c(".csv",".xlsx")),
+      downloadButton("data4.2", label = "Download", class = NULL,icon = icon("download")),
+      easyClose = TRUE,footer = NULL
+    ))}
+  )
+  
+  observeEvent(input$tp_plot5,{
+    req(input$tp_plot5=="Download")
+    
+    showModal(modalDialog(
+      selectInput("format5","Formato:",c(".csv",".xlsx")),
+      downloadButton("data5", label = "Download", class = NULL,icon = icon("download")),
+      easyClose = TRUE,footer = NULL
+    ))}
+  )
+  
+  observeEvent(input$tp_plot6,{
+    req(input$tp_plot6=="Download")
+    
+    showModal(modalDialog(
+      selectInput("format6","Formato:",c(".csv",".xlsx")),
+      downloadButton("data6", label = "Download", class = NULL,icon = icon("download")),
+      easyClose = TRUE,footer = NULL
+    ))}
+  )
   
   database <- reactive({
     df<-read.csv("data/database.csv")
@@ -68,10 +141,13 @@ server <- function(input, output, session) {
     
     df<-df[which(df$ano>=min(input$date) & df$ano<=max(input$date)),]
     df<-df %>% filter(status1 %in% c(input$status))
-    df<-df %>% filter(str_detect(pais,paste(c(input$nacionalidade),collapse = "|")))
     
-    
-    
+    if(input$tp_origem=="Nacional"){
+      df<-df %>% filter(str_detect(uf,paste(c(input$uf),collapse = "|")))
+    } else if(input$tp_origem=="Internacional"){
+      df<-df %>% filter(str_detect(pais,paste(c(input$nacionalidade),collapse = "|")))
+    }
+
   })
   
   database2 <- reactive({
@@ -108,125 +184,156 @@ server <- function(input, output, session) {
     )
     
     df2<-df2[which(df2$ano>=min(input$date) & df2$ano<=max(input$date)),]
-    df2<-df2 %>% filter(brasil %in% c(input$nacionalidade))
     df2<-df2 %>% filter(status1 %in% c(input$status))
+    
+    if(input$tp_origem=="Nacional"){
+      df2<-df2 %>% filter(str_detect(uf,paste(c(input$uf),collapse = "|")))
+    } else if(input$tp_origem=="Internacional"){
+      df2<-df2 %>% filter(str_detect(pais,paste(c(input$nacionalidade),collapse = "|")))
+    }
+    
     
   })
   
   output$title <- renderUI({
-    
+
     if(input$tab=="evolucao"){
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Evolução temporal dos pedidos de patentes","</div>")
     } else if(input$tab=="categoria"){
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Pedidos de patentes por classificação tecnológica","</div>")
     } else if(input$tab=="status"){
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Situação dos pedidos de patentes","</div>")
-    } else if(input$tab=="localizacao" | input$tab=="tp_pessoa"){
+    } else if(input$tab=="origem" | input$tab=="tp_pessoa"){
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Perfil do depositante","</div>")
     } else if(input$tab=="inventor"){
-      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Perfil do inventore","</div>")
+      htmlText = paste("<div style='margin-left: 0.2px'!important;>","Perfil do inventor","</div>")
     } else if(input$tab=="cooperacao"){
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Cooperação entre os pedidos de patentes","</div>")
     } else if(input$tab=="explorar"){
       htmlText = paste("<div style='margin-left: 0.2px'!important;>","Explorar os pedidos de patentes","</div>")
     }
-    
+
     HTML(htmlText)
   })
   
   output$title_plot1 <- renderUI({
-    htmlText = paste0("Número de patentes depositadas por ano", ifelse(input$tp_ano=="concessão"," da "," do "),input$tp_ano,", ", min(input$date)," a ",max(input$date))
+    if(input$tp_plot1!="Download"){
+      htmlText = paste0("Número de patentes depositadas por ano", 
+                        ifelse(input$tp_ano=="concessão"," da "," do "),
+                        input$tp_ano,", ", min(input$date)," a ",max(input$date))
+    }
     
     HTML(htmlText)
   })
   
   output$title_plot2 <- renderUI({
-    if(input$tp_plot1!="Setor"){
-      htmlText = paste0("Número de patentes depositadas segundo classificação tecnológica por ano", ifelse(input$tp_ano=="concessão"," da "," do "),input$tp_ano," ,",min(input$date)," a ",max(input$date))
-    } else {
-      htmlText = paste0("Distribuição proporcional das patentes depositadas segundo classificação tecnológica, ",min(input$date)," a ",max(input$date))
+    if(input$tp_plot2!="Download"){
+      if(input$tp_plot2=="Barras" | input$tp_plot2=="Linhas" | input$tp_plot2=="Tabela"){
+        htmlText = paste0("Número de patentes depositadas segundo classificação tecnológica por ano", 
+                          ifelse(input$tp_ano=="concessão"," da "," do "),
+                          input$tp_ano,", ",min(input$date)," a ",max(input$date))
+        
+      } else if(input$tp_plot2=="Setor"){
+        htmlText = paste0("Distribuição proporcional das patentes depositadas segundo classificação tecnológica, ",
+                          min(input$date)," a ",max(input$date))
+        
+      }
+      HTML(htmlText)
     }
-    HTML(htmlText)
   })
   
   output$title_plot3 <- renderUI({
-    if(input$tp_plot1!="Setor"){
-      htmlText = paste0("Número de patentes depositadas segundo status por ano",ifelse(input$tp_ano=="concessão"," da "," do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
-    } else{
-      htmlText = paste0("Distribuição proporcional das patentes depositadas segundo status, ",min(input$date)," a ",max(input$date))
+    if(input$tp_plot3!="Download"){
+      if(input$tp_plot3=="Barras" | input$tp_plot3=="Linhas" | input$tp_plot3=="Tabela"){
+        htmlText = paste0("Número de patentes depositadas segundo status por ano",ifelse(input$tp_ano=="concessão"," da "," do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot3=="Setor"){
+        htmlText = paste0("Distribuição proporcional das patentes depositadas segundo status, ",min(input$date)," a ",max(input$date))
+      }
+      HTML(htmlText)
     }
-    HTML(htmlText)
   })
   
-  output$title_plot4.1 <- renderUI({
-    if(input$tp_plot1=="Barras" | input$tp_plot1=="Linhas"){
-      htmlText = paste0(ifelse(input$select4.1=="Número absoluto","Número de patentes ","Distribuição proporcional das patentes "),
-                        "depositadas por inventores com nacionalidade ",
-                        ifelse(input$local=="Brasil","brasileira","de algum país das Américas")," por ano ",
-                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
-    } else if(input$tp_plot1=="Tabela"){
-      htmlText = paste0("Número de patentes depositadas por inventores com nacionalidade ",
-                        ifelse(input$local=="Brasil","brasileira","de algum país das Américas")," por ano ",
-                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
-    } else if(input$tp_plot1=="Setor"){
-      htmlText = paste0("Distribuição proporcional das patentes depositadas por inventores com nacionalidade ",
-                        ifelse(input$local=="Brasil","brasileira","de algum país das Américas"),", ",min(input$date)," a ",max(input$date))
+  output$title_plot41 <- renderUI({
+    if(input$tp_plot41!="Download"){
+      if(input$tp_plot41=="Barras" | input$tp_plot41=="Linhas"){
+        htmlText = paste0(ifelse(input$select41=="Número absoluto","Número de patentes ","Distribuição proporcional das patentes "),
+                          "depositadas por inventores com nacionalidade ",
+                          ifelse(input$local=="Brasil","brasileira","de algum país das Américas")," por ano ",
+                          ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot41=="Tabela"){
+        htmlText = paste0("Número de patentes depositadas por inventores com nacionalidade ",
+                          ifelse(input$local=="Brasil","brasileira","de algum país das Américas")," por ano ",
+                          ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot41=="Setor"){
+        htmlText = paste0("Distribuição proporcional das patentes depositadas por inventores com nacionalidade ",
+                          ifelse(input$local=="Brasil","brasileira","de algum país das Américas"),", ",min(input$date)," a ",max(input$date))
+      }
+      
+      HTML(htmlText)
     }
     
-    HTML(htmlText)
   })
   
-  output$title_plot4.2 <- renderUI({
-    if(input$tp_plot1=="Barras" | input$tp_plot1=="Linhas"){
-      htmlText = paste0(ifelse(input$select4.2=="Número absoluto","Número de patentes ","Distribuição proporcional das patentes "),
-                        "depositadas por tipo de classificação por ano ",
-                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
-    } else if(input$tp_plot1=="Tabela"){
-      htmlText = paste0("Número de patentes depositadas por tipo de classificação por ano ",
-                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
-    } else if(input$tp_plot1=="Setor"){
-      htmlText = paste0("Distribuição proporcional das patentes depositadas por tipo de classificação, ",min(input$date)," a ",max(input$date))
+  output$title_plot42 <- renderUI({
+    if(input$tp_plot42!="Download"){
+      if(input$tp_plot42=="Barras"){
+        htmlText = paste0(ifelse(input$select42=="Número absoluto","Número de patentes depositadas por pessoa física por ano ",
+                                 "Distribuição proporcional das patentes depositadas por tipo de pessoa (física e não física) por ano "),
+                          ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot42=="Linhas"){
+        htmlText = paste0("Número de patentes depositadas por pessoa física por ano ",
+                          ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot42=="Tabela"){
+        htmlText = paste0("Número de patentes depositadas por tipo de pessoa (física e não física) por ano ",
+                          ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot42=="Setor"){
+        htmlText = paste0("Distribuição proporcional das patentes depositadas por tipo de pessoa (física e não física), ",min(input$date)," a ",max(input$date))
+      }
+
+      HTML(htmlText)
     }
-    
-    HTML(htmlText)
+
   })
   
   output$title_plot5 <- renderUI({
-    if(input$tp_plot1=="Barras" | input$tp_plot1=="Linhas"){
-      htmlText = paste0(ifelse(input$select5=="Proporção",
-                               "Distribuição proporcional das patentes depositadas segundo presença feminina entre os inventores por ano ",
-                               "Número de patentes depositadas com a presença de inventor do sexo feminino por ano "),
-                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
-    } else if(input$tp_plot1=="Tabela"){
-      htmlText = paste0("Número de patentes depositadas com a presença de inventor do sexo feminino por ano ",
-                        ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
-    } else if(input$tp_plot1=="Setor"){
-      htmlText = paste0("Distribuição proporcional das patentes depositadas segundo presença feminina entre os inventores, ",min(input$date)," a ",max(input$date))
+    if(input$tp_plot5!="Download"){
+      if(input$tp_plot5=="Barras"){
+        htmlText = paste0(ifelse(input$select5=="Proporção",
+                                 "Distribuição proporcional das patentes depositadas segundo presença feminina entre os inventores por ano ",
+                                 "Número de patentes depositadas com a presença de inventor do sexo feminino por ano "),
+                          ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot5=="Tabela" | input$tp_plot5=="Linhas"){
+        htmlText = paste0("Número de patentes depositadas com a presença de inventor do sexo feminino por ano ",
+                          ifelse(input$tp_ano=="concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot5=="Setor"){
+        htmlText = paste0("Distribuição proporcional das patentes depositadas segundo presença feminina entre os inventores, ",min(input$date)," a ",max(input$date))
+      }
+      
+      HTML(htmlText)
     }
     
-    HTML(htmlText)
   })
   
   output$title_plot6 <- renderUI({
-    if(input$tp_plot1=="Barras" | input$tp_plot1=="Linhas"){
-      htmlText = paste0(ifelse(input$select6=="Proporção",
-                               "Distribuição proporcional das patentes depositadas por inventores brasileiros com cooperação internacional por ano ",
-                               "Número de patentes depositadas por inventores brasileiros com cooperação internacional por ano "),
-                        ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
-    } else if(input$tp_plot1=="Tabela"){
-      htmlText = paste0("Número de patentes depositadas por inventores brasileiros com cooperação internacional por ano ",
-                        ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
-    } else if(input$tp_plot1=="Setor"){
-      htmlText = paste0("Distribuição proporcional das patentes depositadas por inventores brasileiros com cooperação internacional, ",min(input$date)," a ",max(input$date))
+    if(input$tp_plot6!="Download"){
+      if(input$tp_plot6=="Barras"){
+        htmlText = paste0(ifelse(input$select6=="Proporção",
+                                 paste0("Distribuição proporcional das patentes depositadas por inventores brasileiros com cooperação ",input$coopera," por ano "),
+                                 paste0("Número de patentes depositadas por inventores brasileiros com cooperação ",input$coopera," por ano ")),
+                          ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot6=="Tabela" | input$tp_plot6=="Linhas"){
+        htmlText = paste0("Número de patentes depositadas por inventores brasileiros com cooperação ",input$coopera," por ano ",
+                          ifelse(input$tp_ano=="Concessão","da ","do "),input$tp_ano,", ",min(input$date)," a ",max(input$date))
+      } else if(input$tp_plot6=="Setor"){
+        htmlText = paste0("Distribuição proporcional das patentes depositadas por inventores brasileiros com cooperação ", input$coopera,", ",min(input$date)," a ",max(input$date))
+      }
+      
+      HTML(htmlText)
     }
     
-    HTML(htmlText)
   })
   
-  output$plot1 <- renderPlotly({
-    mrg <- list(l = 50, r = 50,
-                b = 50, t = 10,
-                pad = 5)
+  output$plot1 <- renderGirafe({
     
     db1=database() %>%
       group_by(date=ano) %>%
@@ -243,25 +350,51 @@ server <- function(input, output, session) {
     
     yTitle="Número de patentes"
     
-    if(input$tp_plot=="Barras"){
-      plot_ly(db1, x = ~date, y = ~count, type = 'bar',marker = list(color = 'rgb(0,82,102)')) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE),
-               yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-        layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-        layout(yaxis = list(tickformat = ".0f"))
-    } else if(input$tp_plot=="Linhas"){
-      plot_ly(db1, x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = F, linewidth = 1.1, linecolor = 'black'),
-               yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
-        layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-        layout(yaxis = list(tickformat = ".0f"))
+    if(input$tp_plot1=="Barras"){
+      p=ggplot(db1,aes(x=date,y=count))+
+        geom_bar_interactive(stat='identity',aes(tooltip=count),fill="#005266")+
+        labs(x=xTitle,y=yTitle)+
+        theme_classic()+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 16),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=12),
+              strip.text = element_text(size=16))+
+        guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+        scale_y_continuous(labels = scales::number,expand=c(0,0.05))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+      
+      girafe(ggobj = p,width_svg = 14,height_svg = 8)
+      
+    } else if(input$tp_plot1=="Linhas"){
+      p=ggplot(db1,aes(x=date,y=count))+
+        geom_line(color="#005266",size=1.1)+
+        geom_point_interactive(aes(tooltip=count),color="#005266")+
+        labs(x=xTitle,y=yTitle)+
+        theme_classic()+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 16),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=12),
+              strip.text = element_text(size=16))+
+        guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+        scale_y_continuous(labels = scales::number,expand=c(0,0.05),limits = c(0,max(db1$count)))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+      
+      girafe(ggobj = p,width_svg = 14,height_svg = 8)
+      
     }
   })
   
-  output$plot2 <- renderPlotly({
-    mrg <- list(l = 50, r = 50,
-                b = 50, t = 10,
-                pad = 5)
+  output$plot2 <- renderGirafe({
     
     db=database()
     db=melt(db[,c("ano",input$nivel2)],id="ano")
@@ -313,50 +446,96 @@ server <- function(input, output, session) {
                    "indeferimento" = "Ano do indeferimento"
     )
     
-    if(input$tp_plot1=="Barras"){
-      if(input$select2=="Número absoluto"){
-        
-        yTitle="Número de patentes"
-        
-        plot_ly(db1, x = ~date, y = ~count,color = ~cat, type = 'bar',colors = colors) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f"))
-      } else if(input$select2=="Proporção"){
-        yTitle="Proporção"
-        plot_ly(db1, x = ~date, y = ~per,color = ~cat, type = 'bar',colors = colors) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f"))
-      }
-    } else if(input$tp_plot1=="Linhas"){
+    
+    if(input$tp_plot2=="Barras"){
+      yTitle=switch (input$select2,
+        "Número absoluto" = "Número de patentes",
+        "Proporção" = "Proporção"
+      )
+          
+      p=ggplot(db1,aes(x=date,y=count,fill=cat))+
+        geom_bar_interactive(stat='identity',position=ifelse(input$select2=="Número absoluto","stack","fill"),aes(tooltip=paste0(cat,": ",count)))+
+        labs(x=xTitle,y=yTitle,fill="")+
+        theme_classic()+
+        theme(legend.position = "bottom")+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 12),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=12),
+              strip.text = element_text(size=16))+
+        guides(fill=guide_legend(nrow=ifelse(input$nivel=="Nível 1",2,8),byrow=TRUE))+
+        scale_fill_manual("",values = colors)+
+        scale_y_continuous(labels = ifelse(input$select2=="Número absoluto",scales::number,scales::percent),expand=c(0,0.05))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+      
+      girafe(ggobj = p,width_svg = 14,height_svg = 8)
+      
+    } else if(input$tp_plot2=="Linhas"){
       yTitle="Número de patentes"
       
-      plot_ly(data.frame(db1), x = ~date, y = ~count, color= ~cat,type = 'scatter', mode = 'lines',colors = colors) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
-               yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
-        layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-        layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-        layout(yaxis = list(tickformat = ".0f"))
-    } else if(input$tp_plot1=="Setor"){
+      p=ggplot(db1,aes(x=date,y=count,color=cat))+
+        geom_line(size=1.1)+
+        geom_point_interactive(aes(tooltip=count))+
+        labs(x=xTitle,y=yTitle,color=NULL)+
+        theme_classic()+
+        theme(legend.position = "bottom")+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 12),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=12),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=ifelse(input$nivel=="Nível 1",2,8),byrow=TRUE))+
+        scale_color_manual("",values = colors)+
+        scale_y_continuous(labels = scales::number,expand=c(0,0.05),limits = c(0,max(db1$count)))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
       
-      plot_ly(data=db,labels = ~ classif, values = ~value) %>% 
-        add_pie(hole = 0.6)%>% 
-        layout(showlegend = F,
-               xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-               yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+      girafe(ggobj = p,width_svg = 14,height_svg = 8)
+      
+    } else if(input$tp_plot2=="Setor"){
+      
+      db1=db %>%
+        group_by(cat=classif) %>%
+        summarise(count=sum(value))
+      
+      db1$per=db1$count/sum(db1$count)
+      
+      db1$ymax=cumsum(db1$per)
+      db1$ymin=c(0,head(db1$ymax,n=-1))
+      
+      p=ggplot(db1, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=cat))+
+        geom_rect_interactive(aes(tooltip=paste0(cat,": ",round(per*100,1),"%")))+
+        scale_color_manual("",values = colors)+
+        scale_fill_manual("",values = colors)+
+        coord_polar(theta="y")+
+        xlim(c(2, 4))+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 16),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=12),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=ifelse(input$nivel=="Nível 1",2,8),byrow=TRUE))+
+        theme_void()+
+        theme(legend.position = "bottom")
+        
+      
+      girafe(ggobj = p,width_svg = 14,height_svg = 8)
+      
     }
   })
   
-  output$plot3 <- renderPlotly({
-    mrg <- list(l = 50, r = 50,
-                b = 50, t = 10,
-                pad = 5)
-    
+  output$plot3 <- renderGirafe({
     
     db1=database() %>% 
       group_by(date=ano,cat=status1) %>% 
@@ -379,61 +558,104 @@ server <- function(input, output, session) {
                    "indeferimento" = "Ano do indeferimento"
     )
     
-    if(input$tp_plot1=="Barras"){
-      if(input$select3=="Número absoluto"){
-        yTitle="Número de patentes"
-        
-        plot_ly(db1, x = ~date, y = ~count,color = ~cat, type = 'bar',colors=colors) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f"))
-      } else if(input$select3=="Proporção"){
-        yTitle="Proporção"
-        
-        plot_ly(db1, x = ~date, y = ~per,color = ~cat, type = 'bar',colors=colors) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f"))
-      }
-    } else if(input$tp_plot1=="Linhas"){
+    if(input$tp_plot3=="Barras"){
+      
+      yTitle=switch (input$select3,
+        "Número absoluto" = "Número de patentes",
+        "Proporção" = "Proporção"
+      )
+      
+      p=ggplot(db1,aes(x=date,y=count,fill=cat))+
+        geom_bar_interactive(stat='identity',position=ifelse(input$select3=="Número absoluto","stack","fill"),aes(tooltip=paste0(cat,": ",count)))+
+        labs(x=xTitle,y=yTitle,fill="")+
+        theme_classic()+
+        theme(legend.position = "bottom")+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 12),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+        scale_fill_manual("",values = colors)+
+        scale_y_continuous(labels = ifelse(input$select3=="Número absoluto",scales::number,scales::percent),expand=c(0,0.05))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+      
+      girafe(ggobj = p,width_svg = 14,height_svg = 8)
+      
+
+    } else if(input$tp_plot3=="Linhas"){
       yTitle="Número de patentes"
       
-      plot_ly(data.frame(db1), x = ~date, y = ~count, color= ~cat,type = 'scatter', mode = 'lines',colors=colors) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = F, linewidth = 1.1, linecolor = 'black'),
-               yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
-        layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-        layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-        layout(yaxis = list(tickformat = ".0f"))
-    } else if(input$tp_plot1=="Setor"){
+      p=ggplot(db1,aes(x=date,y=count,color=cat))+
+        geom_line(size=1.1)+
+        geom_point_interactive(aes(tooltip=count))+
+        labs(x=xTitle,y=yTitle,color=NULL)+
+        theme_classic()+
+        theme(legend.position = "bottom")+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 12),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        scale_color_manual("",values = colors)+
+        scale_y_continuous(labels = scales::number,expand=c(0,0.05),limits = c(0,max(db1$count)))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+      
+      girafe(ggobj = p,width_svg = 14,height_svg = 8)
+      
+    } else if(input$tp_plot3=="Setor"){
       db=database() %>% 
-        group_by(status1) %>% 
+        group_by(cat=status1) %>% 
         summarise(count=sum(count))
       
-      plot_ly(data=db,labels = ~ status1, values = ~count) %>% 
-        add_pie(hole = 0.6)%>% 
-        layout(showlegend = F,
-               xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-               yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+      db$per=db$count/sum(db$count)
+      
+      db$ymax=cumsum(db$per)
+      db$ymin=c(0,head(db$ymax,n=-1))
+      
+      p=ggplot(db, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=cat))+
+        geom_rect_interactive(aes(tooltip=paste0(cat,": ",round(per*100,1),"%")))+
+        scale_color_manual("",values = colors)+
+        scale_fill_manual("",values = colors)+
+        coord_polar(theta="y")+
+        xlim(c(2, 4))+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 16),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        theme_void()+
+        theme(legend.position = "bottom")
+      
+      
+      girafe(ggobj = p,width_svg = 14,height_svg = 8)
     }
   })
   
-  output$plot4.1 <- renderPlotly({
-    mrg <- list(l = 50, r = 50,
-                b = 50, t = 10,
-                pad = 5)
+  output$plot41 <- renderGirafe({
     
     db=database()
     
     db$cat=switch(input$local,
-      "Brasil" = db$brasil,
-      "América" = db$america
+                  "Brasil" = db$brasil,
+                  "América" = db$america
     )
     
-    db1=db %>% 
+    db1<-db %>% 
       group_by(date=ano,cat=cat) %>% 
       summarise(count=sum(count))
     
@@ -450,65 +672,122 @@ server <- function(input, output, session) {
                    "indeferimento" = "Ano do indeferimento"
     )
     
-    if(input$tp_plot1=="Barras"){
-      if(input$select4.1=="Número absoluto"){
+    if(input$tp_plot41=="Barras"){
+      if(input$select41=="Número absoluto"){
         yTitle="Número de patentes"
         
-        plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'bar',marker = list(color = 'rgb(0,82,102)')) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f"))
-      } else if(input$select4.1=="Proporção"){
+        p=ggplot(db1[which(db1$cat==1),],aes(x=date,y=count))+
+          geom_bar_interactive(stat='identity',fill="#005266",aes(tooltip=count))+
+          labs(x=xTitle,y=yTitle,fill="")+
+          theme_classic()+
+          theme(legend.position = "none")+
+          theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+                axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+                axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+                axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+                legend.text=element_text(size = 12),
+                text=element_text(size = 16),
+                title = element_text(size = 16),
+                plot.caption = element_text(size=16),
+                strip.text = element_text(size=16))+
+          guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+          scale_y_continuous(labels = scales::number,expand=c(0,0.05))+
+          scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
         
-        db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c(
-          ifelse(input$local=="Brasil","Brasil","América"),
-          ifelse(input$local=="Brasil","Outros países","Outros continentes"),
-          "Sem informação de país"
-        ))
         
+        
+      } else if(input$select41=="Proporção"){
         yTitle="Proporção"
         
-        plot_ly(db1, x = ~date, y = ~per, type = 'bar',color = ~cat) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f%"))
-      } 
-    } else if(input$tp_plot1=="Linhas"){
+        db1$cat=factor(db1$cat,levels=c(1,0),labels=c(ifelse(input$local=="Brasil","Brasil","América"),
+                                                      ifelse(input$local=="Brasil","Outros países","Outros continentes")))
+        
+        p=ggplot(db1,aes(x=date,y=count,fill=cat))+
+          geom_bar_interactive(stat='identity',position=position_fill(reverse = T),aes(tooltip=paste0(cat,": ",per,"%")))+
+          labs(x=xTitle,y=yTitle,fill="")+
+          theme_classic()+
+          theme(legend.position = "bottom")+
+          theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+                axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+                axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+                axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+                legend.text=element_text(size = 12),
+                text=element_text(size = 16),
+                title = element_text(size = 16),
+                plot.caption = element_text(size=16),
+                strip.text = element_text(size=16))+
+          guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+          scale_fill_manual("",values=c("#005266","#7197A4"))+
+          scale_y_continuous(labels = scales::percent,expand=c(0,0.05))+
+          scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+      }
+      
+      
+    } else if(input$tp_plot41=="Linhas"){
       yTitle="Número de patentes"
       
-      db1=data.frame(db1)
-      plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
-               yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
-        layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-        layout(yaxis = list(tickformat = ".0f"))
-    } else if(input$tp_plot1=="Setor"){
-      db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c(
-        ifelse(input$local=="Brasil","Brasil","América"),
-        ifelse(input$local=="Brasil","Outros países","Outros continentes"),
-        "Sem informação de país"
-      ))
+      p=ggplot(db1[which(db1$cat==1),],aes(x=date,y=count))+
+        geom_line(color="#005266",size=1.1)+
+        geom_point_interactive(aes(tooltip=count),color="#005266")+
+        labs(x=xTitle,y=yTitle,color=NULL)+
+        theme_classic()+
+        theme(legend.position = "bottom")+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 12),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        scale_color_manual("",values = colors)+
+        scale_y_continuous(labels = scales::number,expand=c(0,0.05),limits = c(0,max(db1[which(db1$cat==1),]$count)))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
       
-      plot_ly(data=db1,labels = ~ cat, values = ~count) %>% 
-        add_pie(hole = 0.6)%>% 
-        layout(showlegend = F,
-               xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-               yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-      }
+    } else if(input$tp_plot41=="Setor"){
+      db1=db %>%
+        group_by(cat) %>% 
+        summarise(count=sum(count))
+      
+      db1$per=db1$count/sum(db1$count)
+      
+      db1$ymax=cumsum(db1$per)
+      db1$ymin=c(0,head(db1$ymax,n=-1))
+      
+      db1$cat=factor(db1$cat,levels=c(1,0),labels=c(input$local,ifelse(input$local=="Brasil","Outros países","Outros continentes")))
+      
+      p=ggplot(db1, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=cat))+
+        geom_rect_interactive(aes(tooltip=paste0(cat,": ",round(per*100,1),"%")))+
+        scale_color_manual("",values = c("#005266","#7197A4"))+
+        scale_fill_manual("",values = c("#005266","#7197A4"))+
+        coord_polar(theta="y")+
+        labs(fill="",color="")+
+        xlim(c(2, 4))+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 18),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        theme_void()+
+        theme(legend.position = "bottom")
+      
+    }
+    
+    girafe(ggobj = p,width_svg = 14,height_svg = 8)
   })
   
-  output$plot4.2 <- renderPlotly({
-    mrg <- list(l = 50, r = 50,
-                b = 50, t = 10,
-                pad = 5)
+  output$plot42 <- renderGirafe({
     
     db1=database() %>% 
       group_by(date=ano,cat=tp_pessoa) %>% 
       summarise(count=sum(count))
-    
     
     db1$per=NA
     for(i in unique(db1$date)){
@@ -522,54 +801,118 @@ server <- function(input, output, session) {
                    "indeferimento" = "Ano do indeferimento"
     )
     
-    if(input$tp_plot1=="Barras"){
-      if(input$select4.2=="Número absoluto"){
+    if(input$tp_plot42=="Barras"){
+      if(input$select42=="Número absoluto"){
         yTitle="Número de patentes"
         
-        plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'bar',marker = list(color = 'rgb(0,82,102)')) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f"))
-      } else if(input$select4.2=="Proporção"){
+        p=ggplot(db1[which(db1$cat==1),],aes(x=date,y=count))+
+          geom_bar_interactive(stat='identity',fill="#005266",aes(tooltip=count))+
+          labs(x=xTitle,y=yTitle,fill="")+
+          theme_classic()+
+          theme(legend.position = "none")+
+          theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+                axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+                axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+                axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+                legend.text=element_text(size = 12),
+                text=element_text(size = 16),
+                title = element_text(size = 16),
+                plot.caption = element_text(size=16),
+                strip.text = element_text(size=16))+
+          guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+          scale_y_continuous(labels = scales::number,expand=c(0,0.05))+
+          scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+        
+        
+        
+      } else if(input$select42=="Proporção"){
+        yTitle="Proporção"
         
         db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c("Pessoa física","Não pessoa física","Sem informação de país"))
         
-        yTitle="Proporção"
-        
-        plot_ly(db1, x = ~date, y = ~per, type = 'bar',color = ~cat) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f%"))
-      } 
-    } else if(input$tp_plot1=="Linhas"){
+        p=ggplot(db1,aes(x=date,y=count,fill=cat))+
+          geom_bar_interactive(stat='identity',position=position_fill(reverse = F),aes(tooltip=paste0(cat,": ",per,"%")))+
+          labs(x=xTitle,y=yTitle,fill="")+
+          theme_classic()+
+          theme(legend.position = "bottom")+
+          theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+                axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+                axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+                axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+                legend.text=element_text(size = 12),
+                text=element_text(size = 16),
+                title = element_text(size = 16),
+                plot.caption = element_text(size=16),
+                strip.text = element_text(size=16))+
+          guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+          scale_fill_manual("",values=c("#005266","#7197A4","grey70"))+
+          scale_y_continuous(labels = scales::percent,expand=c(0,0.05))+
+          scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+      }
+      
+      
+    } else if(input$tp_plot42=="Linhas"){
       yTitle="Número de patentes"
       
-      db1=data.frame(db1)
-      plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
-               yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
-        layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-        layout(yaxis = list(tickformat = ".0f"))
-    } else if(input$tp_plot1=="Setor"){
-      db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c("Pessoa física","Não pessoa física","Sem informação de país"))
+      p=ggplot(db1[which(db1$cat==1),],aes(x=date,y=count))+
+        geom_line(color="#005266",size=1.1)+
+        geom_point_interactive(aes(tooltip=count),color="#005266")+
+        labs(x=xTitle,y=yTitle,color=NULL)+
+        theme_classic()+
+        theme(legend.position = "bottom")+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 12),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        scale_color_manual("",values = colors)+
+        scale_y_continuous(labels = scales::number,expand=c(0,0.05),limits = c(0,max(db1[which(db1$cat==1),]$count)))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
       
-      plot_ly(data=db1,labels = ~ cat, values = ~count) %>% 
-        add_pie(hole = 0.6)%>% 
-        layout(showlegend = F,
-               xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-               yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+    } else if(input$tp_plot42=="Setor"){
+      
+      db2=database() %>% 
+        group_by(cat=tp_pessoa) %>% 
+        summarise(count=sum(count))
+      
+      db2$per=db2$count/sum(db2$count)
+      
+      db2$ymax=cumsum(db2$per)
+      db2$ymin=c(0,head(db2$ymax,n=-1))
+      
+      db2$cat=factor(db2$cat,levels=c(1,0,9),labels=c("Pessoa física","Não pessoa física","Sem informação de país"))
+      
+      p=ggplot(db2, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=cat))+
+        geom_rect_interactive(aes(tooltip=paste0(cat,": ",round(per*100,1),"%")))+
+        scale_color_manual("",values = c("#005266","#7197A4","grey70"))+
+        scale_fill_manual("",values = c("#005266","#7197A4","grey70"))+
+        coord_polar(theta="y")+
+        labs(fill="",color="")+
+        xlim(c(2, 4))+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 18),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        theme_void()+
+        theme(legend.position = "bottom")
+      
     }
+    
+    girafe(ggobj = p,width_svg = 14,height_svg = 8)
   })
   
-  output$plot5 <- renderPlotly({
-    mrg <- list(l = 50, r = 50,
-                b = 50, t = 10,
-                pad = 5)
-    
-    db=database()
+  output$plot5 <- renderGirafe({
     
     db1=database() %>% 
       group_by(date=ano,cat=feminino) %>% 
@@ -587,57 +930,128 @@ server <- function(input, output, session) {
                    "indeferimento" = "Ano do indeferimento"
     )
     
-    if(input$tp_plot1=="Barras"){
+    if(input$tp_plot5=="Barras"){
       if(input$select5=="Número absoluto"){
         yTitle="Número de patentes"
         
-        plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'bar',marker = list(color = 'rgb(0,82,102)')) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f"))
+        p=ggplot(db1[which(db1$cat==1),],aes(x=date,y=count))+
+          geom_bar_interactive(stat='identity',fill="#005266",aes(tooltip=count))+
+          labs(x=xTitle,y=yTitle,fill="")+
+          theme_classic()+
+          theme(legend.position = "none")+
+          theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+                axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+                axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+                axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+                legend.text=element_text(size = 12),
+                text=element_text(size = 16),
+                title = element_text(size = 16),
+                plot.caption = element_text(size=16),
+                strip.text = element_text(size=16))+
+          guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+          scale_y_continuous(labels = scales::number,expand=c(0,0.05))+
+          scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+        
+        
+        
       } else if(input$select5=="Proporção"){
-        
-        db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c("Presença feminina","Ausência feminina","Sem informação de sexo"))
-        
         yTitle="Proporção"
         
-        plot_ly(db1, x = ~date, y = ~per, type = 'bar',color = ~cat) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f%"))
-      } 
-    } else if(input$tp_plot1=="Linhas"){
+        db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c("Presença feminina","Ausência feminina","Sem informação"))
+        
+        p=ggplot(db1,aes(x=date,y=count,fill=cat))+
+          geom_bar_interactive(stat='identity',position=position_fill(reverse = F),aes(tooltip=paste0(cat,": ",per,"%")))+
+          labs(x=xTitle,y=yTitle,fill="")+
+          theme_classic()+
+          theme(legend.position = "bottom")+
+          theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+                axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+                axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+                axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+                legend.text=element_text(size = 12),
+                text=element_text(size = 16),
+                title = element_text(size = 16),
+                plot.caption = element_text(size=16),
+                strip.text = element_text(size=16))+
+          guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+          scale_fill_manual("",values=c("#005266","#7197A4","grey70"))+
+          scale_y_continuous(labels = scales::percent,expand=c(0,0.05))+
+          scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+      }
+      
+      
+    } else if(input$tp_plot5=="Linhas"){
       yTitle="Número de patentes"
       
-      db1=data.frame(db1)
+      p=ggplot(db1[which(db1$cat==1),],aes(x=date,y=count))+
+        geom_line(color="#005266",size=1.1)+
+        geom_point_interactive(aes(tooltip=count),color="#005266")+
+        labs(x=xTitle,y=yTitle,color=NULL)+
+        theme_classic()+
+        theme(legend.position = "bottom")+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 12),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        scale_color_manual("",values = colors)+
+        scale_y_continuous(labels = scales::number,expand=c(0,0.05),limits = c(0,max(db1[which(db1$cat==1),]$count)))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
       
-      plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
-               yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
-        layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-        layout(yaxis = list(tickformat = ".0f"))
-    } else if(input$tp_plot1=="Setor"){
-      db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c("Presença feminina","Ausência feminina","Sem informação de sexo"))
+    } else if(input$tp_plot5=="Setor"){
       
-      plot_ly(data=db1,labels = ~ cat, values = ~count) %>% 
-        add_pie(hole = 0.6)%>% 
-        layout(showlegend = F,
-               xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-               yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+      db2=database() %>% 
+        group_by(cat=feminino) %>% 
+        summarise(count=sum(count))
+      
+      db2$per=db2$count/sum(db2$count)
+      
+      db2$ymax=cumsum(db2$per)
+      db2$ymin=c(0,head(db2$ymax,n=-1))
+      
+      db2$cat=factor(db2$cat,levels=c(1,0,9),labels=c("Presença feminina","Ausência feminina","Sem informação"))
+      
+      p=ggplot(db2, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=cat))+
+        geom_rect_interactive(aes(tooltip=paste0(cat,": ",round(per*100,1),"%")))+
+        scale_color_manual("",values = c("#005266","#7197A4","grey70"))+
+        scale_fill_manual("",values = c("#005266","#7197A4","grey70"))+
+        coord_polar(theta="y")+
+        labs(fill="",color="")+
+        xlim(c(2, 4))+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 18),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        theme_void()+
+        theme(legend.position = "bottom")
+      
     }
+    
+    girafe(ggobj = p,width_svg = 14,height_svg = 8)
   })
   
-  output$plot6 <- renderPlotly({
-    mrg <- list(l = 50, r = 50,
-                b = 50, t = 10,
-                pad = 5)
+  output$plot6 <- renderGirafe({
     
-    db1=database() %>% 
+    db=database()
+    db$coopera=switch(input$coopera,
+                      "nacional" = db$cooper_nac,
+                      "internacional" = db$cooper_int
+    )
+    
+    db1=db %>% 
       filter(brasil==1) %>% 
-      group_by(date=ano,cat=cooper_int) %>% 
+      group_by(date=ano,cat=coopera) %>% 
       summarise(count=sum(count))
     
     db1$per=NA
@@ -652,47 +1066,116 @@ server <- function(input, output, session) {
                    "indeferimento" = "Ano do indeferimento"
     )
     
-    if(input$tp_plot1=="Barras"){
+    if(input$tp_plot6=="Barras"){
       if(input$select6=="Número absoluto"){
         yTitle="Número de patentes"
         
-        plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'bar',marker = list(color = 'rgb(0,82,102)')) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f"))
+        p=ggplot(db1[which(db1$cat==1),],aes(x=date,y=count))+
+          geom_bar_interactive(stat='identity',fill="#005266",aes(tooltip=count))+
+          labs(x=xTitle,y=yTitle,fill="")+
+          theme_classic()+
+          theme(legend.position = "none")+
+          theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+                axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+                axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+                axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+                legend.text=element_text(size = 12),
+                text=element_text(size = 16),
+                title = element_text(size = 16),
+                plot.caption = element_text(size=16),
+                strip.text = element_text(size=16))+
+          guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+          scale_y_continuous(labels = scales::number,expand=c(0,0.05))+
+          scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+        
+        
+        
       } else if(input$select6=="Proporção"){
-        
-        db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c("Cooperação internacional","Sem cooperação","Sem informação"))
-        
         yTitle="Proporção"
         
-        plot_ly(db1, x = ~date, y = ~per, type = 'bar',color = ~cat) %>%
-          layout(xaxis = list(title = xTitle, showgrid = FALSE),
-                 yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'), barmode = 'stack') %>%
-          layout(legend = list(orientation = "h",xanchor = "center",x = 0.5,y=-0.2)) %>%
-          layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-          layout(yaxis = list(tickformat = ".0f%"))
-      } 
-    } else if(input$tp_plot1=="Linhas"){
+        db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c(paste0("Com cooperação ",input$coopera),paste0("Sem cooperação ",input$coopera),"Sem informação"))
+        
+        p=ggplot(db1,aes(x=date,y=count,fill=cat))+
+          geom_bar_interactive(stat='identity',position=position_fill(reverse = T),aes(tooltip=paste0(cat,": ",per,"%")))+
+          labs(x=xTitle,y=yTitle,fill="")+
+          theme_classic()+
+          theme(legend.position = "bottom")+
+          theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+                axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+                axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+                axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+                legend.text=element_text(size = 12),
+                text=element_text(size = 16),
+                title = element_text(size = 16),
+                plot.caption = element_text(size=16),
+                strip.text = element_text(size=16))+
+          guides(fill=guide_legend(nrow=1,byrow=TRUE))+
+          scale_fill_manual("",values=c("#005266","#7197A4","grey70"))+
+          scale_y_continuous(labels = scales::percent,expand=c(0,0.05))+
+          scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
+      }
+      
+      
+    } else if(input$tp_plot6=="Linhas"){
       yTitle="Número de patentes"
       
-      db1=data.frame(db1)
+      p=ggplot(db1[which(db1$cat==1),],aes(x=date,y=count))+
+        geom_line(color="#005266",size=1.1)+
+        geom_point_interactive(aes(tooltip=count),color="#005266")+
+        labs(x=xTitle,y=yTitle,color=NULL)+
+        theme_classic()+
+        theme(legend.position = "bottom")+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 12),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        scale_color_manual("",values = colors)+
+        scale_y_continuous(labels = scales::number,expand=c(0,0.05),limits = c(0,max(db1[which(db1$cat==1),]$count)))+
+        scale_x_continuous(breaks = seq(min(input$date),max(input$date),1))
       
-      plot_ly(db1[which(db1$cat==1),], x = ~date, y = ~count, type = 'scatter', mode = 'lines',line = list(color = 'rgb(0,82,102)')) %>%
-        layout(xaxis = list(title = xTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black'),
-               yaxis = list(title = yTitle, showgrid = FALSE, showline = T, linewidth = 1.1, linecolor = 'black')) %>%
-        layout(xaxis = list(type = 'date',tickformat = "%Y"), margin = mrg, font = list(family = "Calibri", size = 14)) %>% 
-        layout(yaxis = list(tickformat = ".0f"))
-    } else if(input$tp_plot1=="Setor"){
-      db1$cat=factor(db1$cat,levels=c(1,0,9),labels=c("Cooperação internacional","Sem cooperação","Sem informação"))
+    } else if(input$tp_plot6=="Setor"){
       
-      plot_ly(data=db1,labels = ~ cat, values = ~count) %>% 
-        add_pie(hole = 0.6)%>% 
-        layout(showlegend = F,
-               xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-               yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+      db2=db %>% 
+        filter(brasil==1) %>% 
+        group_by(cat=coopera) %>% 
+        summarise(count=sum(count))
+      
+      db2$per=db2$count/sum(db2$count)
+      
+      db2$ymax=cumsum(db2$per)
+      db2$ymin=c(0,head(db2$ymax,n=-1))
+      
+      db2$cat=factor(db2$cat,levels=c(1,0,9),labels=c(paste0("Com cooperação ",input$coopera),paste0("Sem cooperação ",input$coopera),"Sem informação"))
+      
+      p=ggplot(db2, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=cat))+
+        geom_rect_interactive(aes(tooltip=paste0(cat,": ",round(per*100,1),"%")))+
+        scale_color_manual("",values = c("#005266","#7197A4","grey70"))+
+        scale_fill_manual("",values = c("#005266","#7197A4","grey70"))+
+        coord_polar(theta="y")+
+        labs(fill="",color="")+
+        xlim(c(2, 4))+
+        theme(axis.text.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = .5, face = "plain"),
+              axis.text.y = element_text(color = "grey20", size = 16, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+              axis.title.x = element_text(color = "grey20", size = 16, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+              axis.title.y = element_text(color = "grey20", size = 16, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+              legend.text=element_text(size = 18),
+              text=element_text(size = 16),
+              title = element_text(size = 16),
+              plot.caption = element_text(size=16),
+              strip.text = element_text(size=16))+
+        guides(color=guide_legend(nrow=1,byrow=TRUE))+
+        theme_void()+
+        theme(legend.position = "bottom")
+      
     }
+    
+    girafe(ggobj = p,width_svg = 14,height_svg = 8)
   })
   
   output$tab1 <- DT::renderDataTable({
@@ -711,7 +1194,7 @@ server <- function(input, output, session) {
                        buttons = c('copy', 'csv', 'excel', 'pdf'),
                        rowsGroup = list(0))
     
-    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #005266;}"
     
     header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),"n")
     
@@ -787,7 +1270,7 @@ server <- function(input, output, session) {
                        buttons = c('copy', 'csv', 'excel', 'pdf'),
                        rowsGroup = list(0))
     
-    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #005266;}"
     
     header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
                       names(tab)[-1])
@@ -855,7 +1338,7 @@ server <- function(input, output, session) {
                        buttons = c('copy', 'csv', 'excel', 'pdf'),
                        rowsGroup = list(0))
     
-    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #005266;}"
     
     header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
                       names(tab)[-1])
@@ -905,7 +1388,7 @@ server <- function(input, output, session) {
     print(my.table)
   })
   
-  output$tab4.1 <- DT::renderDataTable({
+  output$tab41 <- DT::renderDataTable({
     db=database()
     db$cat=switch(input$local,
                   "Brasil" = db$brasil,
@@ -917,8 +1400,8 @@ server <- function(input, output, session) {
       summarise(count=sum(count))
     
     tab$cat=switch(input$local,
-      "Brasil" = ifelse(tab$cat==1,"Brasil",ifelse(tab$cat==0,"Outro país","Sem informação")),
-      "América" = ifelse(tab$cat==1,"América",ifelse(tab$cat==0,"Outro continente","Sem informação"))
+                   "Brasil" = ifelse(tab$cat==1,"Brasil",ifelse(tab$cat==0,"Outro país","Sem informação")),
+                   "América" = ifelse(tab$cat==1,"América",ifelse(tab$cat==0,"Outro continente","Sem informação"))
     )
     
     tab=reshape2::dcast(tab,date~cat,value.var = "count")
@@ -934,7 +1417,7 @@ server <- function(input, output, session) {
                        buttons = c('copy', 'csv', 'excel', 'pdf'),
                        rowsGroup = list(0))
     
-    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #005266;}"
     
     header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
                       names(tab)[-1])
@@ -984,7 +1467,7 @@ server <- function(input, output, session) {
     print(my.table)
   })
   
-  output$tab4.2 <- DT::renderDataTable({
+  output$tab42 <- DT::renderDataTable({
     
     tab=database() %>% 
       group_by(date=ano,cat=tp_pessoa) %>% 
@@ -1005,7 +1488,7 @@ server <- function(input, output, session) {
                        buttons = c('copy', 'csv', 'excel', 'pdf'),
                        rowsGroup = list(0))
     
-    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #005266;}"
     
     header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
                       names(tab)[-1])
@@ -1076,7 +1559,7 @@ server <- function(input, output, session) {
                        buttons = c('copy', 'csv', 'excel', 'pdf'),
                        rowsGroup = list(0))
     
-    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #005266;}"
     
     header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
                       names(tab)[-1])
@@ -1128,12 +1611,18 @@ server <- function(input, output, session) {
   
   output$tab6 <- DT::renderDataTable({
     
-    tab=database() %>% 
+    db=database()
+    db$coopera=switch(input$coopera,
+      "nacional" = db$cooper_nac,
+      "internacional" = db$cooper_int
+    )
+    
+    tab=db %>% 
       filter(brasil==1) %>% 
-      group_by(date=ano,cat=cooper_int) %>% 
+      group_by(date=ano,cat=coopera) %>% 
       summarise(count=sum(count))
     
-    tab$cat=factor(tab$cat,levels=c(1,0,9),labels=c("Com cooperação internacional","Sem cooperação internacional","Sem informação"))
+    tab$cat=factor(tab$cat,levels=c(1,0,9),labels=c(paste0("Com cooperação ",input$coopera),paste0("Sem cooperação ",input$coopera),"Sem informação"))
     
     tab=reshape2::dcast(tab,date~cat,value.var = "count")
     
@@ -1148,7 +1637,7 @@ server <- function(input, output, session) {
                        buttons = c('copy', 'csv', 'excel', 'pdf'),
                        rowsGroup = list(0))
     
-    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #005266;}"
     
     header.names <- c(paste0("Ano",ifelse(input$tp_ano=="Concessão"," da "," do "),input$tp_ano),
                       names(tab)[-1])
@@ -1215,7 +1704,7 @@ server <- function(input, output, session) {
                        buttons = c('copy', 'csv', 'excel', 'pdf'),
                        rowsGroup = list(0))
     
-    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #ACBED4;}"
+    header.style <- "th { font-family: 'Calibri'; font-size:16px ;font-weight: bold; color: white; background-color: #005266;}"
     
     header.names <- c("ID","Título","Ano de pedido","Situação atual")
     
@@ -1253,7 +1742,7 @@ server <- function(input, output, session) {
   output$data1 <- downloadHandler(
     
     filename = function() {
-      "data.csv"
+      paste0("data",input$format1)
     },
     
     content = function(file) {
@@ -1262,14 +1751,18 @@ server <- function(input, output, session) {
         group_by(ano) %>%
         summarise(n=sum(count))
       
-      write.csv2(df, file,row.names = FALSE)
+      switch (input$format1,
+        ".csv" = write.csv2(df, file,row.names = FALSE),
+        ".xlsx" = write.xlsx(df,file)
+      )
+      
     }
   )
   
   output$data2 <- downloadHandler(
     
     filename = function() {
-      "data.csv"
+      paste0("data",input$format2)
     },
     
     content = function(file) {
@@ -1287,14 +1780,17 @@ server <- function(input, output, session) {
         group_by(Ano=ano,Categoria=classif) %>%
         summarise(n=sum(value))
       
-      write.csv2(df, file,row.names = FALSE)
+      switch (input$format2,
+              ".csv" = write.csv2(df, file,row.names = FALSE),
+              ".xlsx" = write.xlsx(df,file)
+      )
     }
   )
   
   output$data3 <- downloadHandler(
     
     filename = function() {
-      "data.csv"
+      paste0("data",input$format3)
     },
     
     content = function(file) {
@@ -1303,14 +1799,17 @@ server <- function(input, output, session) {
         group_by(Ano=ano,Status=status1) %>% 
         summarise(n=sum(count))
       
-      write.csv2(df, file,row.names = FALSE)
+      switch (input$format3,
+              ".csv" = write.csv2(df, file,row.names = FALSE),
+              ".xlsx" = write.xlsx(df,file)
+      )
     }
   )
   
   output$data4.1 <- downloadHandler(
     
     filename = function() {
-      "data.csv"
+      paste0("data",input$format4.1)
     },
     
     content = function(file) {
@@ -1327,18 +1826,21 @@ server <- function(input, output, session) {
         summarise(n=sum(count))
       
       df$Categoria=switch(input$local,
-        "Brasil" = ifelse(df$Categoria==1,"Brasil",ifelse(df$Categoria==0,"Outro país","Sem informação")),
-        "América" = ifelse(df$Categoria==1,"América",ifelse(df$Categoria==0,"Outro continente","Sem informação"))
+                          "Brasil" = ifelse(df$Categoria==1,"Brasil",ifelse(df$Categoria==0,"Outro país","Sem informação")),
+                          "América" = ifelse(df$Categoria==1,"América",ifelse(df$Categoria==0,"Outro continente","Sem informação"))
       )
       
-      write.csv2(df, file,row.names = FALSE)
+      switch (input$format4.1,
+              ".csv" = write.csv2(df, file,row.names = FALSE),
+              ".xlsx" = write.xlsx(df,file)
+      )
     }
   )
   
   output$data4.2 <- downloadHandler(
     
     filename = function() {
-      "data.csv"
+      paste0("data",input$format4.2)
     },
     
     content = function(file) {
@@ -1349,14 +1851,17 @@ server <- function(input, output, session) {
       
       df$Categoria=ifelse(df$Categoria==1,"Pessoa física",ifelse(df$Categoria==0,"Não pessoa física","Sem informação"))
       
-      write.csv2(df, file,row.names = FALSE)
+      switch (input$format4.2,
+              ".csv" = write.csv2(df, file,row.names = FALSE),
+              ".xlsx" = write.xlsx(df,file)
+      )
     }
   )
   
   output$data5 <- downloadHandler(
     
     filename = function() {
-      "data.csv"
+      paste0("data",input$format5)
     },
     
     content = function(file) {
@@ -1368,27 +1873,38 @@ server <- function(input, output, session) {
       df$`Presença Feminina`=ifelse(df$`Presença Feminina`==1,"Sim",
                                     ifelse(df$`Presença Feminina`==0,"Não","Sem informação"))
       
-      write.csv2(df, file,row.names = FALSE)
+      switch (input$format5,
+              ".csv" = write.csv2(df, file,row.names = FALSE),
+              ".xlsx" = write.xlsx(df,file)
+      )
     }
   )
   
   output$data6 <- downloadHandler(
     
     filename = function() {
-      "data.csv"
+      paste0("data",input$format6)
     },
     
     content = function(file) {
+      db=database()
+      db$coopera=switch(input$coopera,
+                        "nacional" = db$cooper_nac,
+                        "internacional" = db$cooper_int
+      )
       
-      df=database() %>% 
+      df=db %>% 
         filter(brasil==1) %>% 
-        group_by(Ano=ano,Cooperação=cooper_int) %>% 
-        summarise(n=sum(count))
+        group_by(Ano=ano,Cooperação=coopera) %>% 
+        summarise(count=sum(count))
       
-      df$Cooperação=ifelse(df$Cooperação==1,"Com cooperação internacional",
-                                    ifelse(df$Cooperação==0,"Sem cooperação internacional","Sem informação"))
+      df$Cooperação=factor(df$Cooperação,levels=c(1,0,9),labels=c(paste0("Com cooperação ",input$coopera),paste0("Sem cooperação ",input$coopera),"Sem informação"))
       
-      write.csv2(df, file,row.names = FALSE)
+      
+      switch (input$format6,
+              ".csv" = write.csv2(df, file,row.names = FALSE),
+              ".xlsx" = write.xlsx(df,file)
+      )
     }
   )
   
