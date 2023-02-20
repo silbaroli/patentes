@@ -32,7 +32,7 @@ server <- function(input, output, session) {
     cat<-cat %>% filter(label1 %in% c(input$nivel1))
     
     updatePickerInput(session = session, inputId = "nivel2",
-                      choices = unique(cat$label2))
+                      choices = unique(cat$label2),selected = unique(cat$label2))
     
   }, ignoreInit = TRUE)
   
